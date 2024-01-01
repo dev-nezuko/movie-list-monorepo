@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "scripts": {
+    "start": "concurrently \"cd movies-list-web && npm start\" \"cd movies-list-api && npm start\""
+  }
+}
