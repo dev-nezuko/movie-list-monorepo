@@ -1,67 +1,72 @@
-# A personal movie list API
+# movies-list-api
 
-A TypeScript, Express, and MongoDB backend for a user's movie collection. Users sign in, attach a cover image when adding a movie, list their own entries, and update an entry's title, publication year, or cover. Ownership is part of each movie query rather than a client-supplied owner field.
+The Express + MongoDB backend for [Movie List](../README.md). It signs users in, stores each user's movies with a poster, and serves them back owner-scoped. It is written in TypeScript, compiled to `dist/` and run on Node 22.
 
-This directory contains the API. The matching browser client is bundled at ../movies-list-web; start the two components separately.
+## Run it
 
-## Configure a local demo
-
-The package declares Node.js 18.x. Use an isolated environment and a local MongoDB database.
+The quickest path is the root `docker compose` setup. To run the API on its own you need Node 22 and a MongoDB:
 
 ```sh
 npm ci
-cp .env.example .env
-# Set JWT_SECRET to a unique private value of at least 32 characters.
-# Set SEED_USER_EMAIL and SEED_USER_PASSWORD for a disposable demo account.
-npm run db:seed
-npm start
+cp .env.example .env     # fill in JWT_SECRET and SEED_USER_PASSWORD
+npm run build
+npm run db:seed          # creates SEED_USER_EMAIL once; leaves an existing account alone
+npm start                # node dist/index.js
 ```
 
-The API defaults to localhost:3001 and now waits for MongoDB before listening. Importing the Express app no longer opens a database connection. The seed command reads the root `.env`, requires a supplied password of at least 12 characters, and leaves an existing email unchanged. It is an explicit database write, not a step performed automatically at startup. No default demo password is committed.
+`npm run dev` runs the TypeScript sources with ts-node instead, and `npm run db:seed:dev` seeds without building.
 
-`JWT_SECRET` is required; the old hardcoded signing key is no longer accepted. Changing it invalidates existing tokens. If this project was ever used with the former seeded credentials, replace those credentials before sharing the service.
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `MONGODB_URI` | none, required | Full connection string including the database name |
+| `JWT_SECRET` | none, required | 32+ characters; startup fails with a clear message otherwise |
+| `PORT` / `HOST` | `3001` / `127.0.0.1` | Use `HOST=0.0.0.0` inside a container |
+| `CORS_ORIGIN` | `http://localhost:3000` | Comma-separated list of browser origins |
+| `TRUST_PROXY` | `0` | Number of reverse-proxy hops; set it so the login limit sees client addresses |
+| `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` | none | Only read by the seed command; the password needs 12+ characters |
 
-## One login, one active token
+## Routes
 
-```http
-POST /login
-Content-Type: application/json
+All `/movies` routes need `Authorization: Bearer <token>` and only ever touch the caller's own movies.
 
-{"email":"demo@example.invalid","password":"<your local seed password>"}
-```
+| Route | Body | Result |
+| --- | --- | --- |
+| `POST /login` | JSON `email`, `password` | `200 {token, user}`; 401 for bad credentials; 429 after 10 failures per address in 15 minutes |
+| `POST /logout` | none | Clears the stored token, so it stops working at once |
+| `GET /movies?page=1&pageSize=10` | none | `{movies, page, pageSize, total}`, newest first, without poster bytes; `pageSize` 1-100 |
+| `POST /movies` | multipart `title`, `publicationYear`, `image` | `201 {message, movie}` |
+| `GET /movies/:id` | none | `{movie}` without poster bytes; 404 if it isn't yours |
+| `GET /movies/:id/poster` | none | The stored PNG/JPEG with its real `Content-Type` |
+| `PUT /movies/:id` | multipart `title`, `publicationYear`, optional `image` | `{message, movie}`; the old poster is kept when no image is sent |
+| `DELETE /movies/:id` | none | 204, or 404 if it isn't yours |
+| `GET /health` | none | 200 while MongoDB is connected, else 503 |
 
-The response contains a one-hour bearer token and basic user metadata. Subsequent logins replace the user's stored token. A valid signature alone is insufficient: the middleware also checks that the exact token is still stored for the account. `POST /logout` uses that same middleware before clearing it, so an older replaced token cannot log out a newer session.
+Input rules, enforced in [`src/validation/movie.ts`](src/validation/movie.ts):
+- Titles are trimmed and must be 1-200 characters.
+- `publicationYear` must be four digits, from 1888 to five years ahead.
+- Posters must start with a PNG or JPEG signature (otherwise 415).
+- Uploads are capped at 5 MiB (otherwise 413).
 
-Movie requests use `Authorization: Bearer <local token>`. Do not put tokens in URLs or examples committed to Git.
-
-| Route | Request/result |
-| --- | --- |
-| `POST /movies` | Multipart `title`, `publicationYear`, and `image`; creates an owned movie |
-| `GET /movies?page=1&pageSize=10` | Returns `{"movies":[...]}` for the account; page size 1–100 |
-| `GET /movies/<id>` | Returns `{"movie":...}` only when the account owns it |
-| `PUT /movies/<id>` | Multipart title/year with optional replacement image; owner-scoped update |
-
-The submitted year field is named `publicationYear`; stored/returned records use `publishYear`. Covers are stored as MongoDB binary buffers and returned inside JSON records, not served through a dedicated image URL. That is simple for an exercise but makes larger list responses expensive.
-
-Example creation request, using an image you provide locally:
+Returned records call the year `publishYear`.
 
 ```sh
-curl -X POST http://localhost:3001/movies \
-  -H 'Authorization: Bearer <local token>' \
-  -F 'title=Example film' -F 'publicationYear=2020' -F 'image=@cover.png'
+curl -X POST http://127.0.0.1:3001/movies \
+  -H 'Authorization: Bearer <token>' \
+  -F 'title=Harbour Lights' -F 'publicationYear=1999' -F 'image=@poster.png'
 ```
 
-Uploads are limited to one file of at most 5 MiB with the expected metadata fields. Oversized files return 413. This bounds memory usage per file; it does not validate image magic, re-encode images, or provide a full content moderation/storage service.
-
-## Checks
+## Tests and checks
 
 ```sh
+npm test            # 34 Jest tests
+npm run lint        # ESLint 10 + typescript-eslint, no warnings allowed
 npm run typecheck
-npm test -- --runInBand
 ```
 
-Tests use mocked MongoDB models and authentication fixtures for route cases, plus real JWT signing/verification in middleware tests. They cover owner-scoped reads, pagination, invalid IDs, configured signing keys, stored-token enforcement, invalid signatures/schemes, and bounded multipart uploads.
+Route tests run the real Express routers through supertest with the Mongoose models mocked. The middleware tests sign and verify real JWTs, and the rate-limit test drives eleven failed sign-ins through the app. The MongoDB path itself was checked against `mongo:8.2` in the root Compose stack.
 
-Verification used Node.js 22 with dependency install scripts disabled. A real MongoDB login/logout/seed round trip and the native bcrypt binding were not exercised. Normal installation may need bcrypt's platform binary/build support, particularly outside the declared Node version.
+## Notes
 
-CORS remains open, login throttling is absent, and images stay embedded in document/list responses. Use a local disposable database; a shared deployment needs a restricted origin policy, upload validation, object storage/image delivery, and broader session/route tests. The first README documents these actual boundaries rather than claiming a complete media platform.
+- `src/middlewares/auth.ts` accepts a token only if it matches the one stored on the user. A new sign-in replaces it, so each account has one active session.
+- CORS is limited to `CORS_ORIGIN`. Behind the Compose nginx the browser calls the same origin, so CORS does not come into play there.
+- Posters are stored on the movie document. They are checked by signature but not re-encoded, so JPEG metadata is kept.

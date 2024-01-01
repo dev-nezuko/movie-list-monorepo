@@ -1,50 +1,54 @@
-# Movie-list React client
+# movies-list-web
 
-A React 18 interface for a private movie catalog: sign in, view saved movies, create an entry with a poster, and edit an existing title/year. This directory contains the browser client. The bundled [movies-list-api](../movies-list-api) supplies authentication, storage and uploads; MongoDB runs separately.
+The React 18 client for [Movie List](../README.md): sign in, browse your movies eight to a page, add one with a poster, edit or delete it. It is built with Vite and styled with Tailwind, uses Formik + Yup for forms, and talks to [`movies-list-api`](../movies-list-api).
 
-![Desktop library using synthetic API fixtures and placeholder posters](docs/screenshots/desktop.png)
+![Edit screen with the current poster and the title and year fields](docs/screenshots/desktop-edit.png)
 
-[390px mobile view](docs/screenshots/mobile.png). These screenshots use synthetic titles and mocked API responses, not a live account or commercial movie artwork.
+## Run it
 
-## Local setup
-
-Use Node 22 and the npm lockfile:
+With the API running on `http://127.0.0.1:3001` (see its README, or use the root `docker compose` setup):
 
 ```sh
-npm ci --ignore-scripts
-cp .env_sample .env
-npm start
+npm ci
+cp .env.example .env    # VITE_API_URL=http://127.0.0.1:3001
+npm run dev             # http://localhost:3000
 ```
 
-The UI defaults to `http://localhost:3000`. `REACT_APP_SERVER_URL` selects the API origin and defaults to `http://127.0.0.1:3001` if unset. Run the backend separately with your own local database and account configuration. The API must allow the frontend's origin. React environment values are public in the built bundle; no secret belongs in them.
+`VITE_API_URL` is baked into the bundle at build time and is public, so it must never hold a secret. The Docker image builds with `VITE_API_URL=/api` and lets nginx proxy that path to the API.
 
 ```sh
-npm test -- --watchAll=false --runInBand
-npm run build
+npm test               # 31 Vitest tests (jsdom)
+npm run lint           # ESLint 9 with react-hooks and jsx-a11y
+npm run build          # tsc --noEmit, then vite build into dist/
 ```
 
-## Screens and contract
+## Screens
 
 ```mermaid
 flowchart LR
-  S[Sign in] --> L[Movie list]
-  L --> N[New title / year / poster]
-  L --> E[Edit selected movie]
-  N --> A[Authenticated REST API]
-  E --> A
-  A --> L
+  S[Sign in] --> L["My Movies (?page=n)"]
+  L --> N[Add a movie]
+  L --> E["Edit /movies/:id/edit"]
+  E -->|Delete, confirmed| L
+  N --> L
+  E --> L
+  L -. 401 from any request .-> S
 ```
 
-The service sends login credentials to `POST /login`, then uses the returned `token` as a bearer token. List requests read `GET /movies?page=1&pageSize=10`. Create/update forms send multipart `title`, `publicationYear`, and an optional replacement `image`; returned movie records expose `publishYear`. These field names were checked against the companion backend source, not a live MongoDB run.
+- **Sign in.** The "Remember email" box keeps only the email in `localStorage`, never the password. The page shows the API's own reason for a failure, such as wrong credentials, the rate limit or an unreachable server.
+- **My Movies.** Shows the total count, a two-to-four-column grid of poster cards, and Prev/Next paging stored in the URL. There are separate loading, empty, error and past-the-last-page states.
+- **Add / Edit.** The poster drop zone takes one PNG or JPEG up to 5 MiB. Editing shows the current poster until a new one is dropped, and a pasted or refreshed edit link loads the movie by ID. Delete asks for confirmation inline. Validation matches the API: titles of 1-200 characters, years from 1888 to five years ahead.
 
-Cards are keyboard-accessible edit buttons with responsive columns. Poster object URLs are released on cleanup, and missing artwork has a local placeholder. New entries require a poster; uploads accept one PNG/JPEG up to 5 MiB, matching the backend's size limit. Client-side file checks improve UX but do not replace server validation. Save failures remain visible instead of silently returning to the list. A direct edit URL without navigation state offers a return link rather than a blank page.
+Posters are fetched with the bearer token from `GET /movies/:id/poster` and shown through object URLs that are revoked when the card unmounts.
 
-“Remember email” stores only the email preference, never the password. The bearer token still lives in local storage and is readable to JavaScript; an HttpOnly-session design would need coordinated backend work. Local sign-out clears the token even when the API is unavailable; provider/server revocation cannot be confirmed when that request fails.
+## Look and accessibility
 
-## Evidence and limits
+The palette suits a dim projection room: warm charcoal surfaces, paper-coloured text and a marquee-amber accent. Headings use Young Serif and body text uses Instrument Sans, both from Google Fonts with system fallbacks. All text pairs measure at least 7.8:1 contrast and field borders 3.8:1.
 
-Six Jest tests pass for loading, empty/list/error rendering, logout despite API failure and poster-URL cleanup. The CRA production build passes. A Chrome/Playwright check used a synthetic login/list fixture, exercised desktop and 390px card layouts, uploaded a synthetic image, verified visible save failure, confirmed Cancel does not write, and cleared local state after a simulated logout 503.
+Every field has a visible label tied to its error message with `aria-describedby`. Every control has an amber focus ring. Loading text is announced as a status and failures as alerts.
 
-No real account, movie poster, MongoDB database or live upload API was used. Live authentication, CORS and data persistence remain unverified. Existing React/Router testing deprecation warnings remain.
+## Known limits
 
-The UI currently fetches only the first ten movies and has no pagination controls, delete action, registration screen or video playback. Edit refresh/deep-link recovery needs a movie-by-ID request instead of navigation state. Those are clearer next steps than presenting this catalog as a complete streaming product. The duplicate pnpm lockfile was removed so npm has one authoritative dependency snapshot.
+- The bearer token is kept in `localStorage`, where page scripts can read it.
+- There is no registration or password screen; accounts come from the API's seed command.
+- Tests mock the API module. The end-to-end flow was exercised in a browser against the Compose stack, which is also where the screenshots come from.
