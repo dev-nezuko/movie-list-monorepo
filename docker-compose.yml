@@ -1,0 +1,37 @@
+name: movie-list
+
+services:
+  mongo:
+    image: mongo:8.2
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./movies-list-api
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/movie_list
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (32+ random characters)}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-demo@example.invalid}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      CORS_ORIGIN: http://localhost:8080
+      # Only nginx can reach the API, so its X-Forwarded-For entry is the real client.
+      TRUST_PROXY: "1"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build: ./movies-list-web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

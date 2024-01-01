@@ -30,3 +30,9 @@ test('TRUST_PROXY accepts only a positive hop count', () => {
   expect(trustProxy('1')).toBe(1);
   for (const value of [undefined, '', '0', 'true', '-1', '1.5']) expect(trustProxy(value)).toBe(false);
 });
+
+test('/health reports 503 until MongoDB is connected', async () => {
+  const response = await request(app).get('/health');
+  expect(response.status).toBe(503);
+  expect(response.body).toEqual({ status: 'database unavailable' });
+});

@@ -1,5 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import userRouter from './routes/user';
 import movieRouter from './routes/movie';
 
@@ -22,6 +23,12 @@ app.disable('x-powered-by');
 app.set('trust proxy', trustProxy());
 app.use(cors({ origin: allowedOrigins() }));
 app.use(express.json({ limit: '10kb' }));
+
+// Used by the container health check: healthy only while the MongoDB connection is open.
+app.get('/health', (_req, res) => {
+  const connected = mongoose.connection.readyState === mongoose.ConnectionStates.connected;
+  res.status(connected ? 200 : 503).json({ status: connected ? 'ok' : 'database unavailable' });
+});
 
 app.use(userRouter);
 app.use(movieRouter);
