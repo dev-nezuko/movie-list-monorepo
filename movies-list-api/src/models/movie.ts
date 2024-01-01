@@ -17,6 +17,9 @@ const movieSchema: Schema = new Schema({
   userId: { type: mongoose.Types.ObjectId, required: true },
 });
 
+// Every list query filters by owner and sorts newest first.
+movieSchema.index({ userId: 1, _id: -1 });
+
 const Movie = mongoose.model<IMovie>('Movie', movieSchema);
 
 export default Movie;

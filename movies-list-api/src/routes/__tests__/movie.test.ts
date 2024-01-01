@@ -24,22 +24,28 @@ beforeEach(() => jest.clearAllMocks());
 describe('Movie routes', () => {
   const app = createApp();
 
-  test('GET /movies returns paginated movies for authenticated user', async () => {
-    (Movie.find as unknown as jest.Mock).mockReturnValue({
+  test('GET /movies returns a page of the owner\'s movies without poster bytes', async () => {
+    const query = {
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([
-        { _id: '1', title: 'Movie 1', publishYear: 2020 },
-      ]),
-    });
+      exec: jest.fn().mockResolvedValue([{ _id: '1', title: 'Movie 1', publishYear: 2020 }]),
+    };
+    (Movie.find as unknown as jest.Mock).mockReturnValue(query);
+    (Movie.countDocuments as unknown as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(11) });
 
     const response = await request(app)
-      .get('/movies?page=1&pageSize=10')
+      .get('/movies?page=2&pageSize=10')
       .set('Authorization', 'Bearer token');
 
     expect(response.status).toBe(200);
-    expect(response.body.movies).toHaveLength(1);
+    expect(response.body).toEqual({ movies: [{ _id: '1', title: 'Movie 1', publishYear: 2020 }], page: 2, pageSize: 10, total: 11 });
     expect(Movie.find).toHaveBeenCalledWith({ userId: 'user-id' });
+    expect(Movie.countDocuments).toHaveBeenCalledWith({ userId: 'user-id' });
+    expect(query.select).toHaveBeenCalledWith('-image');
+    expect(query.sort).toHaveBeenCalledWith({ _id: -1 });
+    expect(query.skip).toHaveBeenCalledWith(10);
   });
 
   test('GET /movies validates pagination parameters', async () => {
@@ -110,6 +116,45 @@ test('an update without a new poster keeps the stored image', async () => {
   expect(Movie.findOneAndUpdate).toHaveBeenCalledWith(
     { _id: '658edbd57ff3ddead43bc705', userId: 'user-id' },
     { $set: { title: 'Renamed', publishYear: 2021 } },
-    { new: true },
+    { new: true, projection: '-image' },
   );
+});
+
+const ID = '658edbd57ff3ddead43bc705';
+const chain = (result: unknown) => ({ select: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue(result) });
+
+test('GET /movies/:id is owner-scoped and omits the poster', async () => {
+  const query = chain(null);
+  (Movie.findOne as jest.Mock).mockReturnValue(query);
+  const response = await request(createApp()).get(`/movies/${ID}`);
+  expect(response.status).toBe(404);
+  expect(Movie.findOne).toHaveBeenCalledWith({ _id: ID, userId: 'user-id' });
+  expect(query.select).toHaveBeenCalledWith('-image');
+});
+
+test('GET /movies/:id/poster streams the stored bytes with their detected type', async () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  (Movie.findOne as jest.Mock).mockReturnValue(chain({ image: jpeg }));
+  const response = await request(createApp()).get(`/movies/${ID}/poster`);
+  expect(response.status).toBe(200);
+  expect(response.headers['content-type']).toBe('image/jpeg');
+  expect(response.headers['x-content-type-options']).toBe('nosniff');
+  expect(Buffer.compare(response.body, jpeg)).toBe(0);
+  expect(Movie.findOne).toHaveBeenCalledWith({ _id: ID, userId: 'user-id' });
+});
+
+test('GET /movies/:id/poster is 404 for another owner\'s movie', async () => {
+  (Movie.findOne as jest.Mock).mockReturnValue(chain(null));
+  expect((await request(createApp()).get(`/movies/${ID}/poster`)).status).toBe(404);
+});
+
+test('DELETE /movies/:id removes only an owned movie', async () => {
+  (Movie.deleteOne as jest.Mock).mockReturnValueOnce({ exec: jest.fn().mockResolvedValue({ deletedCount: 1 }) });
+  const deleted = await request(createApp()).delete(`/movies/${ID}`);
+  expect(deleted.status).toBe(204);
+  expect(Movie.deleteOne).toHaveBeenCalledWith({ _id: ID, userId: 'user-id' });
+
+  (Movie.deleteOne as jest.Mock).mockReturnValueOnce({ exec: jest.fn().mockResolvedValue({ deletedCount: 0 }) });
+  expect((await request(createApp()).delete(`/movies/${ID}`)).status).toBe(404);
+  expect((await request(createApp()).delete('/movies/not-an-id')).status).toBe(400);
 });

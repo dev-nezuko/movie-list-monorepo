@@ -13,10 +13,19 @@ interface MulterRequest extends ExpressRequest {
 
 const INVALID_FIELDS = `Give a title of 1-${TITLE_MAX_LENGTH} characters and a four-digit publication year`;
 const UNSUPPORTED_IMAGE = 'Posters must be PNG or JPEG images';
+const NOT_FOUND = 'Movie not found';
+// Poster bytes are only sent by the poster route, so lists stay small.
+const WITHOUT_IMAGE = '-image';
 
 const movieRouter = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: {fileSize: 5 * 1024 * 1024, files: 1, fields: 2} });
+
+function validMovieId(req: ExpressRequest, res: Response): string | null {
+  if (mongoose.isValidObjectId(req.params.id)) return req.params.id;
+  res.status(400).json({ message: 'Invalid movie ID format' });
+  return null;
+}
 
 movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
@@ -39,14 +48,14 @@ movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: 
 
     await movie.save();
 
-    res.status(201).json({ message: 'Movie created successfully' });
+    res.status(201).json({ message: 'Movie created successfully', movie: { _id: movie._id, title, publishYear: year } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
-movieRouter.get('/movies', authMiddleware, async (req: MulterRequest, res: Response) => {
+movieRouter.get('/movies', authMiddleware, async (req: ExpressRequest, res: Response) => {
   try {
     const rawPage = req.query.page as string | undefined;
     const rawPageSize = req.query.pageSize as string | undefined;
@@ -58,33 +67,31 @@ movieRouter.get('/movies', authMiddleware, async (req: MulterRequest, res: Respo
       return res.status(400).json({ message: 'Invalid pagination parameters' });
     }
 
-    const skip = (page - 1) * pageSize;
+    const owner = { userId: req.user?._id };
+    const [movies, total] = await Promise.all([
+      Movie.find(owner)
+        .select(WITHOUT_IMAGE)
+        .sort({ _id: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .exec(),
+      Movie.countDocuments(owner).exec(),
+    ]);
 
-    const movies = await Movie.find({ userId: req.user?._id })
-      .skip(skip)
-      .limit(pageSize)
-      .exec();
-
-    res.status(200).json({ movies });
+    res.status(200).json({ movies, page, pageSize, total });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
-movieRouter.get('/movies/:id', authMiddleware, async (req: MulterRequest, res: Response) => {
+movieRouter.get('/movies/:id', authMiddleware, async (req: ExpressRequest, res: Response) => {
   try {
-    const movieId = req.params.id;
+    const movieId = validMovieId(req, res);
+    if (!movieId) return;
 
-    if (!mongoose.isValidObjectId(movieId)) {
-      return res.status(400).json({ message: 'Invalid movie ID format' });
-    }
-
-    const movie = await Movie.findOne({ _id: movieId, userId: req.user?._id }).exec();
-
-    if (!movie) {
-      return res.status(404).json({ message: 'Movie not found or unauthorized to access' });
-    }
+    const movie = await Movie.findOne({ _id: movieId, userId: req.user?._id }).select(WITHOUT_IMAGE).exec();
+    if (!movie) return res.status(404).json({ message: NOT_FOUND });
 
     res.status(200).json({ movie });
   } catch (error) {
@@ -93,12 +100,28 @@ movieRouter.get('/movies/:id', authMiddleware, async (req: MulterRequest, res: R
   }
 });
 
+movieRouter.get('/movies/:id/poster', authMiddleware, async (req: ExpressRequest, res: Response) => {
+  try {
+    const movieId = validMovieId(req, res);
+    if (!movieId) return;
+
+    const movie = await Movie.findOne({ _id: movieId, userId: req.user?._id }).select('image imageType').exec();
+    if (!movie?.image) return res.status(404).json({ message: NOT_FOUND });
+
+    // Records saved before imageType existed fall back to sniffing.
+    const type = movie.imageType || detectPosterType(movie.image) || 'application/octet-stream';
+    res.set({ 'Content-Type': type, 'Cache-Control': 'private, no-cache', 'X-Content-Type-Options': 'nosniff' });
+    res.status(200).send(movie.image);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
-    const movieId = req.params.id;
-    if (!mongoose.isValidObjectId(movieId)) {
-      return res.status(400).json({ message: 'Invalid movie ID format' });
-    }
+    const movieId = validMovieId(req, res);
+    if (!movieId) return;
 
     const title = parseTitle(req.body.title);
     const year = parseYear(req.body.publicationYear);
@@ -117,14 +140,27 @@ movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (re
     const updatedMovie = await Movie.findOneAndUpdate(
       { _id: movieId, userId: req.user?._id },
       { $set: updatePayload },
-      { new: true }
+      { new: true, projection: WITHOUT_IMAGE }
     );
 
-    if (!updatedMovie) {
-      return res.status(404).json({ message: 'Movie not found or unauthorized to update' });
-    }
+    if (!updatedMovie) return res.status(404).json({ message: NOT_FOUND });
 
     res.status(200).json({ message: 'Movie updated successfully', movie: updatedMovie });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+movieRouter.delete('/movies/:id', authMiddleware, async (req: ExpressRequest, res: Response) => {
+  try {
+    const movieId = validMovieId(req, res);
+    if (!movieId) return;
+
+    const result = await Movie.deleteOne({ _id: movieId, userId: req.user?._id }).exec();
+    if (result.deletedCount === 0) return res.status(404).json({ message: NOT_FOUND });
+
+    res.status(204).end();
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -136,4 +172,5 @@ movieRouter.use((error: {code?: string}, _req: ExpressRequest, res: Response, ne
   if (error.code?.startsWith('LIMIT_')) return res.status(400).json({message: 'Invalid multipart upload'});
   next(error);
 });
+
 export default movieRouter;

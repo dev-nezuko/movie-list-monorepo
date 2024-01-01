@@ -5,10 +5,6 @@ export interface Movie {
   _id: string;
   title: string;
   publishYear: number;
-  image?: {
-    type: string;
-    data: number[];
-  };
 }
 
 interface UseMoviesResult {

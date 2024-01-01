@@ -2,13 +2,18 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import * as useMoviesHook from "../hooks/useMovies";
-import { logout } from "../services/api";
+import { getPoster, logout } from "../services/api";
 import { Movies } from "./Movies";
 
 jest.mock("../hooks/useMovies");
 jest.mock("../services/api", () => ({
   logout: jest.fn(),
+  getPoster: jest.fn(),
 }));
+
+beforeEach(() => {
+  (getPoster as jest.Mock).mockRejectedValue(new Error("no poster in this test"));
+});
 
 const renderWithRouter = () =>
   render(
@@ -53,7 +58,6 @@ describe("Movies page", () => {
           _id: "1",
           title: "Movie 1",
           publishYear: 2020,
-          image: { type: "Buffer", data: [] },
         },
       ],
       isLoading: false,
@@ -94,17 +98,19 @@ test('local logout clears the token even when the API is unavailable', async () 
   await waitFor(() => expect(localStorage.getItem('userToken')).toBeNull());
 });
 
-test('poster object URLs are released when the card unmounts', () => {
+test('poster object URLs are released when the card unmounts', async () => {
   const create = jest.fn(() => 'blob:synthetic-poster');
   const revoke = jest.fn();
   const oldCreate = URL.createObjectURL;
   const oldRevoke = URL.revokeObjectURL;
   URL.createObjectURL = create;
   URL.revokeObjectURL = revoke;
-  (useMoviesHook.useMovies as jest.Mock).mockReturnValue({ movies:[{_id:'one',title:'Synthetic film',publishYear:2024,image:{type:'Buffer',data:[1,2,3]}}], isLoading:false,error:null });
+  (getPoster as jest.Mock).mockResolvedValueOnce(new Blob([new Uint8Array([1, 2, 3])]));
+  (useMoviesHook.useMovies as jest.Mock).mockReturnValue({ movies:[{_id:'one',title:'Synthetic film',publishYear:2024}], isLoading:false,error:null });
   try {
     const view = renderWithRouter();
-    expect(create).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByAltText('Poster for Synthetic film')).toHaveAttribute('src', 'blob:synthetic-poster'));
+    expect(getPoster).toHaveBeenCalledWith('one', null);
     view.unmount();
     expect(revoke).toHaveBeenCalledWith('blob:synthetic-poster');
   } finally { URL.createObjectURL = oldCreate; URL.revokeObjectURL = oldRevoke; }

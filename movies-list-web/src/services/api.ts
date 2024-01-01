@@ -130,3 +130,11 @@ export const updateMovie = async (movieId: string, formData: FormData, userToken
     throw new Error('Failed to update the movie');
   }
 };
+
+export const getPoster = async (movieId: string, userToken: string | null): Promise<Blob> => {
+  const response = await fetch(`${BASE_URL}/movies/${movieId}/poster`, {
+    headers: { 'Authorization': `Bearer ${userToken}` },
+  });
+  if (!response.ok) throw new Error('Failed to load poster');
+  return response.blob();
+};

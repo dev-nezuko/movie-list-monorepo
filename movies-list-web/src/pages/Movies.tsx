@@ -5,7 +5,7 @@ import { ReactComponent as LogoutIcon } from "assets/logout-icon.svg";
 import { MovieCard } from "components/MovieCard";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "constants/routes";
-import { logout } from "../services/api";
+import { getPoster, logout } from "../services/api";
 import { useMovies, Movie } from "../hooks/useMovies";
 
 export const Movies = (): JSX.Element => {
@@ -80,10 +80,19 @@ export const Movies = (): JSX.Element => {
 function MovieWithArtwork({ movie, onEdit }: { movie: Movie; onEdit: () => void }) {
   const [imageUrl, setImageUrl] = useState('');
   useEffect(() => {
-    if (!movie.image?.data.length) { setImageUrl(''); return; }
-    const url = URL.createObjectURL(new Blob([new Uint8Array(movie.image.data)]));
-    setImageUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [movie.image]);
+    let url = '';
+    let cancelled = false;
+    getPoster(movie._id, localStorage.getItem('userToken'))
+      .then((blob) => {
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setImageUrl(url);
+      })
+      .catch(() => setImageUrl(''));
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [movie._id]);
   return <MovieCard title={movie.title} year={String(movie.publishYear)} image={imageUrl || '/poster-placeholder.svg'} onEditClick={onEdit} />;
 }
