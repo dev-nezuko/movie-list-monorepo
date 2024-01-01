@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import User from '../models/user';
 import authMiddleware from '../middlewares/auth';
@@ -7,7 +8,17 @@ import { jwtSecret } from '../config/auth';
 
 const userRouter = express.Router();
 
-userRouter.post('/login', async (req: Request, res: Response) => {
+// Successful sign-ins don't count, so only repeated wrong guesses from one address are slowed.
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { message: 'Too many failed sign-in attempts; try again in 15 minutes' },
+});
+
+userRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (typeof email !== "string" || typeof password !== "string" || !email || !password) {

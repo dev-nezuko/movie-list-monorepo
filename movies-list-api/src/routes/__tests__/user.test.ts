@@ -1,14 +1,21 @@
 import request from 'supertest';
 import bcrypt from 'bcrypt';
+import { ipKeyGenerator } from 'express-rate-limit';
 import app from '../../app';
 import User from '../../models/user';
+import { loginLimiter } from '../user';
 
 jest.mock('../../models/user');
 jest.mock('bcrypt', () => ({ compare: jest.fn() }));
 
 const key = 'synthetic-unit-test-signing-value-only';
 const original = process.env.JWT_SECRET;
-beforeEach(() => { process.env.JWT_SECRET = key; jest.clearAllMocks(); });
+beforeEach(async () => {
+  process.env.JWT_SECRET = key;
+  jest.clearAllMocks();
+  // supertest connects over loopback; clear both address forms so each test starts with a fresh allowance.
+  for (const address of ['::ffff:127.0.0.1', '127.0.0.1']) await loginLimiter.resetKey(ipKeyGenerator(address));
+});
 afterAll(() => { if (original === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = original; });
 
 test('login matches the email case-insensitively and stores the issued token', async () => {
@@ -40,4 +47,15 @@ test('non-string credentials are refused before any lookup', async () => {
   const response = await request(app).post('/login').send({ email: { $ne: null }, password: 'x' });
   expect(response.status).toBe(400);
   expect(User.findOne).not.toHaveBeenCalled();
+});
+
+test('the eleventh failed sign-in from one address within 15 minutes gets 429', async () => {
+  (User.findOne as jest.Mock).mockResolvedValue(null);
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    expect((await request(app).post('/login').send({ email: 'nobody@example.invalid', password: 'x' })).status).toBe(401);
+  }
+  const blocked = await request(app).post('/login').send({ email: 'nobody@example.invalid', password: 'x' });
+  expect(blocked.status).toBe(429);
+  expect(blocked.body.message).toMatch(/Too many failed sign-in attempts/);
+  expect(User.findOne).toHaveBeenCalledTimes(10);
 });

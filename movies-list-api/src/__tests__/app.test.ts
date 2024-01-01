@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app, { allowedOrigins } from '../app';
+import app, { allowedOrigins, trustProxy } from '../app';
 
 jest.mock('../models/user');
 jest.mock('../models/movie');
@@ -24,4 +24,9 @@ test('CORS_ORIGIN accepts a comma-separated list', () => {
 test('the framework banner header is not sent', async () => {
   const response = await request(app).post('/logout');
   expect(response.headers['x-powered-by']).toBeUndefined();
+});
+
+test('TRUST_PROXY accepts only a positive hop count', () => {
+  expect(trustProxy('1')).toBe(1);
+  for (const value of [undefined, '', '0', 'true', '-1', '1.5']) expect(trustProxy(value)).toBe(false);
 });
