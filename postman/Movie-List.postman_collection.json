@@ -1,0 +1,573 @@
+{
+	"info": {
+		"_postman_id": "00000000-0000-4000-8000-000000000000",
+		"name": "Movie-List",
+		"description": "This movie management system provides a secure and efficient backend API for managing movies. Users can authenticate via the `/login` route to receive a JWT token, allowing them to perform CRUD operations on movies. The system supports creating movies with images, fetching paginated movie lists, updating movie details, and retrieving individual movies by their unique identifiers. Additionally, users can securely log out using the `/logout` route, ensuring a seamless and authenticated movie management experience.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Login API",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"demo@example.invalid\",\n    \"password\": \"<your local seed password>\"\n}"
+				},
+				"url": {
+					"raw": "{{baseURL}}/login",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"login"
+					]
+				},
+				"description": "- This endpoint is used for user authentication by providing a valid email and password.\n- The email and password must be sent in the request body as JSON.\n- Upon successful authentication, a JSON Web Token (JWT) is generated and returned in the response, along with user information.\n- In case of authentication failure, appropriate error messages are returned.\n- The generated JWT token should be included in the headers of subsequent requests to access protected routes."
+			},
+			"response": [
+				{
+					"name": "Login API - Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"demo@example.invalid\",\n    \"password\": \"<your local seed password>\"\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/login",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "256"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"100-TwoF53C2iDsWrzbkVaGdjYZfVvc\""
+						},
+						{
+							"key": "Date",
+							"value": "Fri, 29 Dec 2023 14:44:40 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"token\": \"LOCAL_BEARER_TOKEN\",\n    \"user\": {\n        \"id\": \"658ccc596886d1690c9e4cfb\",\n        \"email\": \"demo@example.invalid\"\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Create a Movie",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "title",
+							"value": "The Lantern Keeper",
+							"type": "text"
+						},
+						{
+							"key": "publicationYear",
+							"value": "2023",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseURL}}/movies",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies"
+					]
+				},
+				"description": "- This endpoint is used for creating a new movie entry.\n- The request must include a valid JWT token in the Authorization header for authentication.\n- The movie details such as title and publication year should be sent as form data.\n- In case of authentication failure or server error, appropriate error messages are returned."
+			},
+			"response": [
+				{
+					"name": "Create a Movie - Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "The Lantern Keeper",
+									"type": "text"
+								},
+								{
+									"key": "publicationYear",
+									"value": "2023",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/movies",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies"
+							]
+						}
+					},
+					"status": "Created",
+					"code": 201,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "40"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"28-nrVuarV4PJyxy4uhgZde3se2XgE\""
+						},
+						{
+							"key": "Date",
+							"value": "Fri, 29 Dec 2023 14:46:45 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Movie created successfully\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Retrieve Movies",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "page",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "pageSize",
+							"value": "10",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseURL}}/movies?page=1&pageSize=10",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "pageSize",
+							"value": "10"
+						}
+					]
+				},
+				"description": "- This endpoint is used for fetching a list of movies with optional pagination.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Pagination parameters (page and pageSize) can be included as query parameters.\n    \n- Upon successful retrieval, a JSON array of movie objects along with pagination information is returned.\n    \n- In case of authentication failure or server error, appropriate error messages are returned."
+			},
+			"response": []
+		},
+		{
+			"name": "Update Movies",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "title",
+							"value": "The Lantern Keeper (restored)",
+							"type": "text"
+						},
+						{
+							"key": "publicationYear",
+							"value": "2025",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseURL}}/movies/658edbd57ff3ddead43bc705",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies",
+						"658edbd57ff3ddead43bc705"
+					]
+				},
+				"description": "- This endpoint is used for updating an existing movie.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- The movie details such as title and publication year should be sent as form data.\n    \n- An image file can be attached as part of the form data for updating the movie's image (optional).\n    \n- Upon successful update, a success message along with the updated movie details is returned.\n    \n- In case of authentication failure, movie not found, or server error, appropriate error messages are returned."
+			},
+			"response": [
+				{
+					"name": "Update Movies - Response",
+					"originalRequest": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "The Lantern Keeper (restored)",
+									"type": "text"
+								},
+								{
+									"key": "publicationYear",
+									"value": "2025",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/movies/658edbd57ff3ddead43bc705",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies",
+								"658edbd57ff3ddead43bc705"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "182"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"b6-eTvlniPBDV83+KoepkEwiKFQFsI\""
+						},
+						{
+							"key": "Date",
+							"value": "Fri, 29 Dec 2023 14:49:51 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Movie updated successfully\",\n    \"movie\": {\n        \"_id\": \"658edbd57ff3ddead43bc705\",\n        \"title\": \"The Lantern Keeper (restored)\",\n        \"image\": null,\n        \"publishYear\": 2025,\n        \"userId\": \"658ccc596886d1690c9e4cfb\",\n        \"__v\": 0\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Logout the User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/logout",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"logout"
+					]
+				},
+				"description": "- This endpoint is used for logging out a user.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful logout, a success message is returned.\n    \n- In case of authentication failure or server error, appropriate error messages are returned."
+			},
+			"response": [
+				{
+					"name": "Logout the User - Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/logout",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"logout"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "31"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"1f-vYmtThEV0qgPmOaoi5WLoJuDA80\""
+						},
+						{
+							"key": "Date",
+							"value": "Fri, 29 Dec 2023 14:50:35 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Logout successful\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Retrieve a particular Movie item",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/movies/{{movieID}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies",
+						"{{movieID}}"
+					]
+				},
+				"description": "- This endpoint is used for retrieving details of a specific movie by its unique identifier.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful retrieval, a JSON object with movie details is returned.\n    \n- In case of authentication failure, movie not found, or server error, appropriate error messages are returned."
+			},
+			"response": [
+				{
+					"name": "Retrieve a particular Movie item - Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/movies/{{movieID}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies",
+								"{{movieID}}"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "321"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"90073-/+YzBLjhE19iQzB78iPKoTdVoHo\""
+						},
+						{
+							"key": "Date",
+							"value": "Mon, 01 Jan 2024 01:11:48 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"movie\": {\n        \"_id\": \"658e14487444031814be93b4\",\n        \"title\": \"The Lantern Keeper\",\n        \"image\": {\n            \"type\": \"Buffer\",\n            \"data\": \"[poster bytes omitted from this example]\"\n        },\n        \"publishYear\": 2002,\n        \"userId\": \"658ccc596886d1690c9e4cfb\",\n        \"__v\": 0\n    }\n}"
+				}
+			]
+		}
+	]
+}
