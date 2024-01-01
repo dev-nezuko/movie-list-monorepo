@@ -1,15 +1,9 @@
 import express, { Request as ExpressRequest, Response, NextFunction } from 'express';
-const multer = require('multer');
+import multer from 'multer';
 import authMiddleware from '../middlewares/auth';
 import Movie, { IMovie } from '../models/movie';
 import { mongoose } from '../db/mongoose';
 import { detectPosterType, parseTitle, parseYear, TITLE_MAX_LENGTH } from '../validation/movie';
-
-interface MulterRequest extends ExpressRequest {
-  file?: {
-    buffer?: Buffer;
-  };
-}
 
 const INVALID_FIELDS = `Give a title of 1-${TITLE_MAX_LENGTH} characters and a four-digit publication year`;
 const UNSUPPORTED_IMAGE = 'Posters must be PNG or JPEG images';
@@ -18,8 +12,7 @@ const NOT_FOUND = 'Movie not found';
 const WITHOUT_IMAGE = '-image';
 
 const movieRouter = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: {fileSize: 5 * 1024 * 1024, files: 1, fields: 2} });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 2 } });
 
 function validMovieId(req: ExpressRequest, res: Response): string | null {
   if (mongoose.isValidObjectId(req.params.id)) return req.params.id;
@@ -27,7 +20,7 @@ function validMovieId(req: ExpressRequest, res: Response): string | null {
   return null;
 }
 
-movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
+movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: ExpressRequest, res: Response) => {
   try {
     const title = parseTitle(req.body.title);
     const year = parseYear(req.body.publicationYear);
@@ -118,7 +111,7 @@ movieRouter.get('/movies/:id/poster', authMiddleware, async (req: ExpressRequest
   }
 });
 
-movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
+movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (req: ExpressRequest, res: Response) => {
   try {
     const movieId = validMovieId(req, res);
     if (!movieId) return;

@@ -1,8 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
+import cors from 'cors';
 import userRouter from './routes/user';
 import movieRouter from './routes/movie';
-
-const cors = require('cors');
 
 export function allowedOrigins(value = process.env.CORS_ORIGIN): string[] {
   return (value || 'http://localhost:3000')
