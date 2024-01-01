@@ -114,7 +114,8 @@ test('poster object URLs are released when the card unmounts', async () => {
   (useMoviesHook.useMovies as Mock).mockReturnValue({ movies:[{_id:'one',title:'Synthetic film',publishYear:2024}], total: 1, isLoading:false,error:null });
   try {
     const view = renderWithRouter();
-    await waitFor(() => expect(screen.getByAltText('Poster for Synthetic film')).toHaveAttribute('src', 'blob:synthetic-poster'));
+    const card = screen.getByRole('button', { name: /Edit Synthetic film/ });
+    await waitFor(() => expect(card.querySelector('img')).toHaveAttribute('src', 'blob:synthetic-poster'));
     expect(getPoster).toHaveBeenCalledWith('one', null);
     view.unmount();
     expect(revoke).toHaveBeenCalledWith('blob:synthetic-poster');

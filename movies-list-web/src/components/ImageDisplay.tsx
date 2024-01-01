@@ -35,9 +35,9 @@ export const ImageDisplay = ({ removeFile, image }: ImageProps): JSX.Element | n
           e.stopPropagation();
           removeFile();
         }}
-        className="absolute text-xs text-gray-600 bg-white rounded-full -right-4 hover:text-gray-500 -top-4"
+        className="absolute p-1 rounded-full -right-3 -top-3 bg-ink text-backgroundColor hover:bg-primary"
       >
-        <TrashIcon className="w-4 my-1 mx-1.5" />
+        <TrashIcon className="w-4 h-4" />
       </button>
     </div>
   );

@@ -47,29 +47,29 @@ export const EditMovie = (): JSX.Element => {
 
   return (
     <div className="main-container">
-      <h1 className="mb-10 text-5xl text-white">Edit</h1>
+      <h1 className="mb-10 text-4xl sm:text-5xl text-ink">Edit movie</h1>
       {movie ? (
         <>
           <MovieForm isEditState initialData={movie} />
-          <section aria-label="Delete movie" className="flex flex-wrap items-center gap-3 mt-12 text-white">
+          <section aria-label="Delete movie" className="flex flex-wrap items-center gap-3 pt-6 mt-12 border-t border-line/40 text-ink">
             {confirmingDelete ? (
               <>
                 <p>Delete “{movie.title}” for good?</p>
-                <Button onClick={handleDelete} className="bg-error">Delete permanently</Button>
+                <Button variant="danger" onClick={handleDelete}>Delete permanently</Button>
                 <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>Keep it</Button>
               </>
             ) : (
               <Button variant="secondary" onClick={() => setConfirmingDelete(true)}>Delete movie</Button>
             )}
-            {deleteError && <p role="alert" className="text-red-300">{deleteError}</p>}
+            {deleteError && <p role="alert" className="text-error">{deleteError}</p>}
           </section>
         </>
       ) : loadError ? (
-        <p className="text-white">
-          {loadError} <Link className="underline" to={ROUTES.movies}>Back to movies</Link>
+        <p className="text-ink">
+          {loadError} <Link className="underline text-primary" to={ROUTES.movies}>Back to movies</Link>
         </p>
       ) : (
-        <p className="text-white">Loading movie...</p>
+        <p role="status" className="text-muted">Loading movie...</p>
       )}
     </div>
   );

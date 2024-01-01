@@ -27,13 +27,13 @@ export const ImageUploader = ({ image, currentPosterUrl, onFileUpload, onImageRe
   return (
     <Dropzone accept={{ "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"] }} maxSize={5 * 1024 * 1024} maxFiles={1} onDropRejected={() => setUploadError("Choose one PNG/JPEG image up to 5 MiB.")} onDrop={onDrop}>
       {({ getRootProps, getInputProps }) => (
-        <section className="h-[504px] bg-inputColor w-full max-w-[473px] border border-white border-dashed rounded-xl flex flex-col items-center justify-center text-white">
+        <section className="min-h-[320px] md:h-[504px] bg-inputColor w-full max-w-[473px] border-2 border-line border-dashed rounded-xl flex flex-col items-center justify-center p-6 text-ink">
           {image?.file ? (
             <ImageDisplay image={image} removeFile={onImageRemove} />
           ) : (
             <div
               {...getRootProps()}
-              className="flex flex-col items-center gap-2 cursor-pointer text-center"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg cursor-pointer text-center"
             >
               <input {...getInputProps()} aria-label="Poster image" />
               {currentPosterUrl && (
@@ -41,10 +41,10 @@ export const ImageUploader = ({ image, currentPosterUrl, onFileUpload, onImageRe
               )}
               <UploadIcon />
               <p>{currentPosterUrl ? "Drop a PNG or JPEG to replace the poster" : "Drop a PNG or JPEG poster here"}</p>
-              <p className="text-sm opacity-75">One image, up to 5 MiB</p>
+              <p className="text-sm text-muted">One image, up to 5 MiB</p>
             </div>
           )}
-          {uploadError && <p role="alert" className="px-4 text-center text-red-300">{uploadError}</p>}
+          {uploadError && <p role="alert" className="px-4 text-center text-error">{uploadError}</p>}
         </section>
       )}
     </Dropzone>

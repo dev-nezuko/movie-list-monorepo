@@ -53,18 +53,18 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
       validationSchema={movieSchema}
     >
       {({ isSubmitting }) => (
-        <Form className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Form className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,473px)_minmax(0,24rem)] md:gap-12">
           <ImageUploader
             image={droppedImage}
             currentPosterUrl={currentPosterUrl}
             onFileUpload={setDroppedImage}
             onImageRemove={() => setDroppedImage(undefined)}
           />
-          <div className="flex flex-col w-full max-w-sm gap-3">
-            {error && <p role="alert" className="text-red-300">{error}</p>}
-            <Input name="title" placeholder="Title" />
-            <Input name="year" placeholder="Publishing year" inputMode="numeric" />
-            <div className="flex gap-3 mt-6">
+          <div className="flex flex-col w-full gap-4 md:order-none order-first">
+            {error && <p role="alert" className="text-error">{error}</p>}
+            <Input name="title" label="Title" maxLength={200} />
+            <Input name="year" label="Publishing year" inputMode="numeric" placeholder="e.g. 1999" maxLength={4} />
+            <div className="flex gap-3 mt-4">
               <Button variant="secondary" onClick={() => navigate(ROUTES.movies)}>Cancel</Button>
               <Button disabled={isSubmitting} type="submit">{isEditState ? "Update" : "Submit"}</Button>
             </div>

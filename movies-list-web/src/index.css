@@ -2,16 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: "Montserrat", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
-  background: #093545 url("./assets/background.png") no-repeat bottom;
-  background-size: 100%;
+@layer base {
+  body {
+    @apply font-sans text-ink antialiased;
+    min-height: 100vh;
+    background-color: theme("colors.backgroundColor");
+    background-image: radial-gradient(ellipse 80% 50% at 50% 0%, #2b2018 0%, transparent 70%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2 {
+    @apply font-display font-normal tracking-tight;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-backgroundColor;
+  }
 }
 
-.main-container {
-  @apply mx-auto max-w-6xl px-5 py-8 md:px-10 md:py-16;
+@layer components {
+  .main-container {
+    @apply mx-auto max-w-6xl px-5 py-8 md:px-10 md:py-16;
+  }
 }

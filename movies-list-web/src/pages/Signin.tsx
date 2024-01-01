@@ -36,14 +36,15 @@ export const Signin = (): JSX.Element => {
         validationSchema={signinSchema}
       >
         {({ isSubmitting }) => (
-          <Form className="flex flex-col gap-4 items-center justify-center min-h-[100dvh] w-full max-w-sm px-6">
-            <h1 className="mb-6 text-6xl text-white">Sign in</h1>
-            <Input name="email" type="email" placeholder="Email" autoComplete="email" />
-            <Input name="password" type="password" placeholder="Password" autoComplete="current-password" />
+          <Form className="flex flex-col gap-4 justify-center min-h-[100dvh] w-full max-w-sm px-6">
+            <p className="text-xs font-semibold tracking-[0.3em] uppercase text-primary">Movie List</p>
+            <h1 className="mb-4 text-5xl sm:text-6xl text-ink">Sign in</h1>
+            <Input name="email" type="email" label="Email" autoComplete="email" />
+            <Input name="password" type="password" label="Password" autoComplete="current-password" />
             <Checkbox name="remember" label="Remember email" />
-            {error && <div role="alert" className="text-red-300">{error}</div>}
-            <Button disabled={isSubmitting} className="w-full" type="submit">
-              Login
+            {error && <p role="alert" className="text-error">{error}</p>}
+            <Button disabled={isSubmitting} className="w-full mt-2" type="submit">
+              {isSubmitting ? "Signing in..." : "Login"}
             </Button>
           </Form>
         )}

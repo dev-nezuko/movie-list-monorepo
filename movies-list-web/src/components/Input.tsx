@@ -4,25 +4,29 @@ import { ErrorMessage, useField } from "formik";
 
 interface Props extends HTMLProps<HTMLInputElement> {
   name: string;
+  label: string;
 }
 
-export const Input = ({
-  name,
-  className,
-  type = "text",
-  ...props
-}: Props): JSX.Element => {
+export const Input = ({ name, label, className, type = "text", ...props }: Props): JSX.Element => {
   const [field, meta, { setValue }] = useField(name);
+  const id = `${name}-input`;
+  const errorId = `${name}-error`;
+  const invalid = meta.touched && !!meta.error;
 
   return (
     <div className="w-full">
+      <label htmlFor={id} className="block mb-1.5 text-sm font-semibold text-muted">
+        {label}
+      </label>
       <input
+        id={id}
         type={type}
-        aria-label={String(props.placeholder || name)}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? errorId : undefined}
         className={classnames(
-          "text-white text-sm rounded-lg block w-full p-2.5 bg-inputColor placeholder:text-white",
-          className,
-          { "border border-error": meta.touched && !!meta.error }
+          "text-ink rounded-lg block w-full p-2.5 bg-inputColor border placeholder:text-muted",
+          invalid ? "border-error" : "border-line",
+          className
         )}
         {...props}
         {...field}
@@ -30,9 +34,9 @@ export const Input = ({
       />
       <ErrorMessage name={name}>
         {(msg) => (
-          <div className="mt-1 text-error" role="alert" aria-label={msg}>
+          <p id={errorId} className="mt-1 text-sm text-error">
             {msg}
-          </div>
+          </p>
         )}
       </ErrorMessage>
     </div>
