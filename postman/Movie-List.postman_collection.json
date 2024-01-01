@@ -2,12 +2,23 @@
 	"info": {
 		"_postman_id": "00000000-0000-4000-8000-000000000000",
 		"name": "Movie-List",
-		"description": "This movie management system provides a secure and efficient backend API for managing movies. Users can authenticate via the `/login` route to receive a JWT token, allowing them to perform CRUD operations on movies. The system supports creating movies with images, fetching paginated movie lists, updating movie details, and retrieving individual movies by their unique identifiers. Additionally, users can securely log out using the `/logout` route, ensuring a seamless and authenticated movie management experience.",
+		"description": "Requests for the movie list API. Sign in with `Login API` first: its test script stores the token in `authToken`. `baseURL` defaults to the docker compose stack (nginx at http://localhost:8080/api); use http://127.0.0.1:3001 when running the API with `npm run dev`. Set `movieID` to an `_id` from `Retrieve Movies`.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
 			"name": "Login API",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"if (pm.response.code === 200) pm.collectionVariables.set('authToken', pm.response.json().token);"
+						]
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
 				"header": [
@@ -29,7 +40,7 @@
 						"login"
 					]
 				},
-				"description": "- This endpoint is used for user authentication by providing a valid email and password.\n- The email and password must be sent in the request body as JSON.\n- Upon successful authentication, a JSON Web Token (JWT) is generated and returned in the response, along with user information.\n- In case of authentication failure, appropriate error messages are returned.\n- The generated JWT token should be included in the headers of subsequent requests to access protected routes."
+				"description": "- This endpoint is used for user authentication by providing a valid email and password.\n- The email and password must be sent in the request body as JSON.\n- Upon successful authentication, a JSON Web Token (JWT) is generated and returned in the response, along with user information.\n- In case of authentication failure, appropriate error messages are returned.\n- The generated JWT token should be included in the headers of subsequent requests to access protected routes.\n- The email is matched case-insensitively.\n- After 10 failed attempts from one address in 15 minutes the API answers 429.\n- The test script stores the token in the `authToken` collection variable."
 			},
 			"response": [
 				{
@@ -61,40 +72,48 @@
 					"_postman_previewlanguage": "json",
 					"header": [
 						{
-							"key": "X-Powered-By",
-							"value": "Express"
-						},
-						{
-							"key": "Access-Control-Allow-Origin",
-							"value": "*"
-						},
-						{
 							"key": "Content-Type",
 							"value": "application/json; charset=utf-8"
-						},
-						{
-							"key": "Content-Length",
-							"value": "256"
-						},
-						{
-							"key": "ETag",
-							"value": "W/\"100-TwoF53C2iDsWrzbkVaGdjYZfVvc\""
-						},
-						{
-							"key": "Date",
-							"value": "Fri, 29 Dec 2023 14:44:40 GMT"
-						},
-						{
-							"key": "Connection",
-							"value": "keep-alive"
-						},
-						{
-							"key": "Keep-Alive",
-							"value": "timeout=5"
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"token\": \"LOCAL_BEARER_TOKEN\",\n    \"user\": {\n        \"id\": \"658ccc596886d1690c9e4cfb\",\n        \"email\": \"demo@example.invalid\"\n    }\n}"
+					"body": "{\n    \"token\": \"<JWT, valid for one hour>\",\n    \"user\": {\n        \"id\": \"6af1c9fb369fda0c102f2b58\",\n        \"email\": \"demo@example.invalid\"\n    }\n}"
+				},
+				{
+					"name": "Login API - Too many failures",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"demo@example.invalid\",\n    \"password\": \"<your local seed password>\"\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/login",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"status": "Too Many Requests",
+					"code": 429,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Too many failed sign-in attempts; try again in 15 minutes\"\n}"
 				}
 			]
 		},
@@ -118,13 +137,14 @@
 						},
 						{
 							"key": "publicationYear",
-							"value": "2023",
+							"value": "2002",
 							"type": "text"
 						},
 						{
 							"key": "image",
 							"type": "file",
-							"src": []
+							"src": [],
+							"description": "PNG or JPEG, up to 5 MiB"
 						}
 					]
 				},
@@ -137,7 +157,7 @@
 						"movies"
 					]
 				},
-				"description": "- This endpoint is used for creating a new movie entry.\n- The request must include a valid JWT token in the Authorization header for authentication.\n- The movie details such as title and publication year should be sent as form data.\n- In case of authentication failure or server error, appropriate error messages are returned."
+				"description": "- This endpoint is used for creating a new movie entry.\n- The request must include a valid JWT token in the Authorization header for authentication.\n- The movie details such as title and publication year should be sent as form data.\n- In case of authentication failure or server error, appropriate error messages are returned.\n- Titles are trimmed (1-200 characters); the year must be four digits from 1888 to five years ahead.\n- The poster must really be a PNG or JPEG (checked by its bytes); otherwise the API answers 415."
 			},
 			"response": [
 				{
@@ -160,13 +180,14 @@
 								},
 								{
 									"key": "publicationYear",
-									"value": "2023",
+									"value": "2002",
 									"type": "text"
 								},
 								{
 									"key": "image",
 									"type": "file",
-									"src": ""
+									"src": [],
+									"description": "PNG or JPEG, up to 5 MiB"
 								}
 							]
 						},
@@ -185,48 +206,70 @@
 					"_postman_previewlanguage": "json",
 					"header": [
 						{
-							"key": "X-Powered-By",
-							"value": "Express"
-						},
-						{
-							"key": "Access-Control-Allow-Origin",
-							"value": "*"
-						},
-						{
 							"key": "Content-Type",
 							"value": "application/json; charset=utf-8"
-						},
-						{
-							"key": "Content-Length",
-							"value": "40"
-						},
-						{
-							"key": "ETag",
-							"value": "W/\"28-nrVuarV4PJyxy4uhgZde3se2XgE\""
-						},
-						{
-							"key": "Date",
-							"value": "Fri, 29 Dec 2023 14:46:45 GMT"
-						},
-						{
-							"key": "Connection",
-							"value": "keep-alive"
-						},
-						{
-							"key": "Keep-Alive",
-							"value": "timeout=5"
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"message\": \"Movie created successfully\"\n}"
+					"body": "{\n    \"message\": \"Movie created successfully\",\n    \"movie\": {\n        \"_id\": \"6af1ca14b86a423b782d59a2\",\n        \"title\": \"The Lantern Keeper\",\n        \"publishYear\": 2002\n    }\n}"
+				},
+				{
+					"name": "Create a Movie - Not an image",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "The Lantern Keeper",
+									"type": "text"
+								},
+								{
+									"key": "publicationYear",
+									"value": "2002",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "PNG or JPEG, up to 5 MiB"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/movies",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies"
+							]
+						}
+					},
+					"status": "Unsupported Media Type",
+					"code": 415,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Posters must be PNG or JPEG images\"\n}"
 				}
 			]
 		},
 		{
 			"name": "Retrieve Movies",
-			"protocolProfileBehavior": {
-				"disableBodyPruning": true
-			},
 			"request": {
 				"method": "GET",
 				"header": [
@@ -235,23 +278,8 @@
 						"value": "Bearer {{authToken}}"
 					}
 				],
-				"body": {
-					"mode": "urlencoded",
-					"urlencoded": [
-						{
-							"key": "page",
-							"value": "1",
-							"type": "text"
-						},
-						{
-							"key": "pageSize",
-							"value": "10",
-							"type": "text"
-						}
-					]
-				},
 				"url": {
-					"raw": "{{baseURL}}/movies?page=1&pageSize=10",
+					"raw": "{{baseURL}}/movies?page=1&pageSize=2",
 					"host": [
 						"{{baseURL}}"
 					],
@@ -265,96 +293,41 @@
 						},
 						{
 							"key": "pageSize",
-							"value": "10"
+							"value": "2"
 						}
 					]
 				},
-				"description": "- This endpoint is used for fetching a list of movies with optional pagination.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Pagination parameters (page and pageSize) can be included as query parameters.\n    \n- Upon successful retrieval, a JSON array of movie objects along with pagination information is returned.\n    \n- In case of authentication failure or server error, appropriate error messages are returned."
-			},
-			"response": []
-		},
-		{
-			"name": "Update Movies",
-			"request": {
-				"method": "PUT",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{authToken}}"
-					}
-				],
-				"body": {
-					"mode": "formdata",
-					"formdata": [
-						{
-							"key": "title",
-							"value": "The Lantern Keeper (restored)",
-							"type": "text"
-						},
-						{
-							"key": "publicationYear",
-							"value": "2025",
-							"type": "text"
-						},
-						{
-							"key": "image",
-							"type": "file",
-							"src": []
-						}
-					]
-				},
-				"url": {
-					"raw": "{{baseURL}}/movies/658edbd57ff3ddead43bc705",
-					"host": [
-						"{{baseURL}}"
-					],
-					"path": [
-						"movies",
-						"658edbd57ff3ddead43bc705"
-					]
-				},
-				"description": "- This endpoint is used for updating an existing movie.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- The movie details such as title and publication year should be sent as form data.\n    \n- An image file can be attached as part of the form data for updating the movie's image (optional).\n    \n- Upon successful update, a success message along with the updated movie details is returned.\n    \n- In case of authentication failure, movie not found, or server error, appropriate error messages are returned."
+				"description": "- Lists the signed-in user's movies, newest first.\n- `page` (from 1) and `pageSize` (1-100, default 10) are optional query parameters.\n- Poster bytes are not included; fetch them from `/movies/:id/poster`.\n- `total` is the number of movies the user owns.\n- The test script copies the first `_id` into `movieID` when it is empty."
 			},
 			"response": [
 				{
-					"name": "Update Movies - Response",
+					"name": "Retrieve Movies - Response",
 					"originalRequest": {
-						"method": "PUT",
+						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
 								"value": "Bearer {{authToken}}"
 							}
 						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
+						"url": {
+							"raw": "{{baseURL}}/movies?page=1&pageSize=2",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies"
+							],
+							"query": [
 								{
-									"key": "title",
-									"value": "The Lantern Keeper (restored)",
-									"type": "text"
+									"key": "page",
+									"value": "1"
 								},
 								{
-									"key": "publicationYear",
-									"value": "2025",
-									"type": "text"
-								},
-								{
-									"key": "image",
-									"type": "file",
-									"src": []
+									"key": "pageSize",
+									"value": "2"
 								}
 							]
-						},
-						"url": {
-							"raw": "{{baseURL}}/movies/658edbd57ff3ddead43bc705",
-							"host": [
-								"{{baseURL}}"
-							],
-							"path": [
-								"movies",
-								"658edbd57ff3ddead43bc705"
-							]
 						}
 					},
 					"status": "OK",
@@ -362,124 +335,24 @@
 					"_postman_previewlanguage": "json",
 					"header": [
 						{
-							"key": "X-Powered-By",
-							"value": "Express"
-						},
-						{
-							"key": "Access-Control-Allow-Origin",
-							"value": "*"
-						},
-						{
 							"key": "Content-Type",
 							"value": "application/json; charset=utf-8"
-						},
-						{
-							"key": "Content-Length",
-							"value": "182"
-						},
-						{
-							"key": "ETag",
-							"value": "W/\"b6-eTvlniPBDV83+KoepkEwiKFQFsI\""
-						},
-						{
-							"key": "Date",
-							"value": "Fri, 29 Dec 2023 14:49:51 GMT"
-						},
-						{
-							"key": "Connection",
-							"value": "keep-alive"
-						},
-						{
-							"key": "Keep-Alive",
-							"value": "timeout=5"
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"message\": \"Movie updated successfully\",\n    \"movie\": {\n        \"_id\": \"658edbd57ff3ddead43bc705\",\n        \"title\": \"The Lantern Keeper (restored)\",\n        \"image\": null,\n        \"publishYear\": 2025,\n        \"userId\": \"658ccc596886d1690c9e4cfb\",\n        \"__v\": 0\n    }\n}"
+					"body": "{\n    \"movies\": [\n        {\n            \"_id\": \"6af1ca14b86a423b782d59c0\",\n            \"title\": \"Weathervane\",\n            \"imageType\": \"image/png\",\n            \"publishYear\": 2008,\n            \"userId\": \"6af1c9fb369fda0c102f2b58\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"6af1ca14b86a423b782d59bd\",\n            \"title\": \"The Last Ferry to Ardmore\",\n            \"imageType\": \"image/png\",\n            \"publishYear\": 1962,\n            \"userId\": \"6af1c9fb369fda0c102f2b58\",\n            \"__v\": 0\n        }\n    ],\n    \"page\": 1,\n    \"pageSize\": 2,\n    \"total\": 11\n}"
 				}
-			]
-		},
-		{
-			"name": "Logout the User",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{authToken}}"
-					}
-				],
-				"url": {
-					"raw": "{{baseURL}}/logout",
-					"host": [
-						"{{baseURL}}"
-					],
-					"path": [
-						"logout"
-					]
-				},
-				"description": "- This endpoint is used for logging out a user.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful logout, a success message is returned.\n    \n- In case of authentication failure or server error, appropriate error messages are returned."
-			},
-			"response": [
+			],
+			"event": [
 				{
-					"name": "Logout the User - Response",
-					"originalRequest": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{authToken}}"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}/logout",
-							"host": [
-								"{{baseURL}}"
-							],
-							"path": [
-								"logout"
-							]
-						}
-					},
-					"status": "OK",
-					"code": 200,
-					"_postman_previewlanguage": "json",
-					"header": [
-						{
-							"key": "X-Powered-By",
-							"value": "Express"
-						},
-						{
-							"key": "Access-Control-Allow-Origin",
-							"value": "*"
-						},
-						{
-							"key": "Content-Type",
-							"value": "application/json; charset=utf-8"
-						},
-						{
-							"key": "Content-Length",
-							"value": "31"
-						},
-						{
-							"key": "ETag",
-							"value": "W/\"1f-vYmtThEV0qgPmOaoi5WLoJuDA80\""
-						},
-						{
-							"key": "Date",
-							"value": "Fri, 29 Dec 2023 14:50:35 GMT"
-						},
-						{
-							"key": "Connection",
-							"value": "keep-alive"
-						},
-						{
-							"key": "Keep-Alive",
-							"value": "timeout=5"
-						}
-					],
-					"cookie": [],
-					"body": "{\n    \"message\": \"Logout successful\"\n}"
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const first = pm.response.json().movies?.[0];",
+							"if (first && !pm.collectionVariables.get('movieID')) pm.collectionVariables.set('movieID', first._id);"
+						]
+					}
 				}
 			]
 		},
@@ -503,7 +376,7 @@
 						"{{movieID}}"
 					]
 				},
-				"description": "- This endpoint is used for retrieving details of a specific movie by its unique identifier.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful retrieval, a JSON object with movie details is returned.\n    \n- In case of authentication failure, movie not found, or server error, appropriate error messages are returned."
+				"description": "- This endpoint is used for retrieving details of a specific movie by its unique identifier.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful retrieval, a JSON object with movie details is returned.\n    \n- In case of authentication failure, movie not found, or server error, appropriate error messages are returned.\n- Another user's movie answers 404, the same as a missing one."
 			},
 			"response": [
 				{
@@ -532,42 +405,353 @@
 					"_postman_previewlanguage": "json",
 					"header": [
 						{
-							"key": "X-Powered-By",
-							"value": "Express"
-						},
-						{
-							"key": "Access-Control-Allow-Origin",
-							"value": "*"
-						},
-						{
 							"key": "Content-Type",
 							"value": "application/json; charset=utf-8"
-						},
-						{
-							"key": "Content-Length",
-							"value": "321"
-						},
-						{
-							"key": "ETag",
-							"value": "W/\"90073-/+YzBLjhE19iQzB78iPKoTdVoHo\""
-						},
-						{
-							"key": "Date",
-							"value": "Mon, 01 Jan 2024 01:11:48 GMT"
-						},
-						{
-							"key": "Connection",
-							"value": "keep-alive"
-						},
-						{
-							"key": "Keep-Alive",
-							"value": "timeout=5"
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"movie\": {\n        \"_id\": \"658e14487444031814be93b4\",\n        \"title\": \"The Lantern Keeper\",\n        \"image\": {\n            \"type\": \"Buffer\",\n            \"data\": \"[poster bytes omitted from this example]\"\n        },\n        \"publishYear\": 2002,\n        \"userId\": \"658ccc596886d1690c9e4cfb\",\n        \"__v\": 0\n    }\n}"
+					"body": "{\n    \"movie\": {\n        \"_id\": \"6af1ca14b86a423b782d59c0\",\n        \"title\": \"Weathervane\",\n        \"imageType\": \"image/png\",\n        \"publishYear\": 2008,\n        \"userId\": \"6af1c9fb369fda0c102f2b58\",\n        \"__v\": 0\n    }\n}"
 				}
 			]
+		},
+		{
+			"name": "Retrieve a Movie poster",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/movies/{{movieID}}/poster",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies",
+						"{{movieID}}",
+						"poster"
+					]
+				},
+				"description": "- Returns the stored poster bytes with their real `Content-Type` (`image/png` or `image/jpeg`).\n- Owner-scoped like every movie route."
+			},
+			"response": [
+				{
+					"name": "Retrieve a Movie poster - Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/movies/{{movieID}}/poster",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies",
+								"{{movieID}}",
+								"poster"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "raw",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "image/png"
+						},
+						{
+							"key": "Cache-Control",
+							"value": "private, no-cache"
+						},
+						{
+							"key": "X-Content-Type-Options",
+							"value": "nosniff"
+						}
+					],
+					"cookie": [],
+					"body": "<binary PNG data>"
+				}
+			]
+		},
+		{
+			"name": "Update Movies",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "title",
+							"value": "Weathervane (restored)",
+							"type": "text"
+						},
+						{
+							"key": "publicationYear",
+							"value": "2009",
+							"type": "text"
+						},
+						{
+							"key": "image",
+							"type": "file",
+							"src": [],
+							"description": "PNG or JPEG, up to 5 MiB; enable and pick a file to replace the poster",
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseURL}}/movies/{{movieID}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies",
+						"{{movieID}}"
+					]
+				},
+				"description": "- This endpoint is used for updating an existing movie.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- The movie details such as title and publication year should be sent as form data.\n    \n- An image file can be attached as part of the form data for updating the movie's image (optional).\n- Without an image the stored poster is kept."
+			},
+			"response": [
+				{
+					"name": "Update Movies - Response",
+					"originalRequest": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Weathervane (restored)",
+									"type": "text"
+								},
+								{
+									"key": "publicationYear",
+									"value": "2009",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "PNG or JPEG, up to 5 MiB; enable and pick a file to replace the poster",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/movies/{{movieID}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies",
+								"{{movieID}}"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Movie updated successfully\",\n    \"movie\": {\n        \"_id\": \"6af1ca14b86a423b782d59c0\",\n        \"title\": \"Weathervane (restored)\",\n        \"imageType\": \"image/png\",\n        \"publishYear\": 2009,\n        \"userId\": \"6af1c9fb369fda0c102f2b58\",\n        \"__v\": 0\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Delete a Movie",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/movies/{{movieID}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"movies",
+						"{{movieID}}"
+					]
+				},
+				"description": "- Deletes one of the signed-in user's movies.\n- Answers 204 with no body, or 404 if the movie is not the user's."
+			},
+			"response": [
+				{
+					"name": "Delete a Movie - Response",
+					"originalRequest": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/movies/{{movieID}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movies",
+								"{{movieID}}"
+							]
+						}
+					},
+					"status": "No Content",
+					"code": 204,
+					"_postman_previewlanguage": "raw",
+					"header": [],
+					"cookie": [],
+					"body": ""
+				}
+			]
+		},
+		{
+			"name": "Logout the User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL}}/logout",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"logout"
+					]
+				},
+				"description": "- This endpoint is used for logging out a user.\n    \n- The request must include a valid JWT token in the Authorization header for authentication.\n    \n- Upon successful logout, a success message is returned.\n    \n- In case of authentication failure or server error, appropriate error messages are returned.\n- The token stops working immediately, before it expires."
+			},
+			"response": [
+				{
+					"name": "Logout the User - Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/logout",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"logout"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Logout successful\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Health check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/health",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "- 200 while MongoDB is connected, 503 otherwise. Used by the container health check."
+			},
+			"response": [
+				{
+					"name": "Health check - Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/health",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": \"ok\"\n}"
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "http://localhost:8080/api"
+		},
+		{
+			"key": "authToken",
+			"value": ""
+		},
+		{
+			"key": "movieID",
+			"value": ""
 		}
 	]
 }
