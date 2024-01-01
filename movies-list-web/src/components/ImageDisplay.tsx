@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ReactComponent as DeleteIcon } from 'assets/delete-icon.svg';
+import { TrashIcon } from 'components/icons';
 import { Image } from 'types/Image';
 
 interface ImageProps {
@@ -38,7 +38,7 @@ export const ImageDisplay = ({ removeFile, image }: ImageProps): JSX.Element | n
         }}
         className="absolute text-xs text-gray-600 bg-white rounded-full -right-4 hover:text-gray-500 -top-4"
       >
-        <DeleteIcon className="w-4 my-1 mx-1.5" />
+        <TrashIcon className="w-4 my-1 mx-1.5" />
       </button>
     </div>
   );

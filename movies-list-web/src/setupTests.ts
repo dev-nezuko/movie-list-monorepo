@@ -1,12 +1,8 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
 
-// Provide a minimal mock for URL.createObjectURL to keep image-related
-// helpers from throwing in the JSDOM environment used by Jest.
-if (!(window as any).URL) {
-  (window as any).URL = {} as URL;
-}
-
-if (typeof (window as any).URL.createObjectURL !== "function") {
-  (window as any).URL.createObjectURL = () => "blob:mock-url";
-}
-
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});

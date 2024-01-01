@@ -3,6 +3,6 @@
     "concurrently": "^8.2.2"
   },
   "scripts": {
-    "start": "concurrently \"cd movies-list-web && npm start\" \"cd movies-list-api && npm start\""
+    "start": "concurrently \"npm --prefix movies-list-web run dev\" \"npm --prefix movies-list-api run dev\""
   }
 }

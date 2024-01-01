@@ -1,18 +1,18 @@
-import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, test, vi, type Mock } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import * as useMoviesHook from "../hooks/useMovies";
 import { getPoster, logout } from "../services/api";
 import { Movies } from "./Movies";
 
-jest.mock("../hooks/useMovies");
-jest.mock("../services/api", () => ({
-  logout: jest.fn(),
-  getPoster: jest.fn(),
+vi.mock("../hooks/useMovies");
+vi.mock("../services/api", () => ({
+  logout: vi.fn(),
+  getPoster: vi.fn(),
 }));
 
 beforeEach(() => {
-  (getPoster as jest.Mock).mockRejectedValue(new Error("no poster in this test"));
+  (getPoster as Mock).mockRejectedValue(new Error("no poster in this test"));
 });
 
 const renderWithRouter = () =>
@@ -24,7 +24,7 @@ const renderWithRouter = () =>
 
 describe("Movies page", () => {
   it("shows loading state while movies are being fetched", () => {
-    (useMoviesHook.useMovies as jest.Mock).mockReturnValue({
+    (useMoviesHook.useMovies as Mock).mockReturnValue({
       movies: [],
       isLoading: true,
       error: null,
@@ -38,7 +38,7 @@ describe("Movies page", () => {
   });
 
   it("shows empty state when there are no movies", () => {
-    (useMoviesHook.useMovies as jest.Mock).mockReturnValue({
+    (useMoviesHook.useMovies as Mock).mockReturnValue({
       movies: [],
       isLoading: false,
       error: null,
@@ -52,7 +52,7 @@ describe("Movies page", () => {
   });
 
   it("renders movies when data is available", () => {
-    (useMoviesHook.useMovies as jest.Mock).mockReturnValue({
+    (useMoviesHook.useMovies as Mock).mockReturnValue({
       movies: [
         {
           _id: "1",
@@ -70,7 +70,7 @@ describe("Movies page", () => {
   });
 
   it("shows error state when hook reports an error", () => {
-    (useMoviesHook.useMovies as jest.Mock).mockReturnValue({
+    (useMoviesHook.useMovies as Mock).mockReturnValue({
       movies: [],
       isLoading: false,
       error: "Failed to load movies",
@@ -90,8 +90,8 @@ describe("Movies page", () => {
 
 
 test('local logout clears the token even when the API is unavailable', async () => {
-  (useMoviesHook.useMovies as jest.Mock).mockReturnValue({ movies: [{_id:'one',title:'Synthetic film',publishYear:2024}], isLoading:false, error:null });
-  (logout as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+  (useMoviesHook.useMovies as Mock).mockReturnValue({ movies: [{_id:'one',title:'Synthetic film',publishYear:2024}], isLoading:false, error:null });
+  (logout as Mock).mockRejectedValueOnce(new Error('offline'));
   localStorage.setItem('userToken','offline-fixture');
   renderWithRouter();
   fireEvent.click(screen.getByRole('button', {name:/Logout/i}));
@@ -99,14 +99,14 @@ test('local logout clears the token even when the API is unavailable', async () 
 });
 
 test('poster object URLs are released when the card unmounts', async () => {
-  const create = jest.fn(() => 'blob:synthetic-poster');
-  const revoke = jest.fn();
+  const create = vi.fn(() => 'blob:synthetic-poster');
+  const revoke = vi.fn();
   const oldCreate = URL.createObjectURL;
   const oldRevoke = URL.revokeObjectURL;
   URL.createObjectURL = create;
   URL.revokeObjectURL = revoke;
-  (getPoster as jest.Mock).mockResolvedValueOnce(new Blob([new Uint8Array([1, 2, 3])]));
-  (useMoviesHook.useMovies as jest.Mock).mockReturnValue({ movies:[{_id:'one',title:'Synthetic film',publishYear:2024}], isLoading:false,error:null });
+  (getPoster as Mock).mockResolvedValueOnce(new Blob([new Uint8Array([1, 2, 3])]));
+  (useMoviesHook.useMovies as Mock).mockReturnValue({ movies:[{_id:'one',title:'Synthetic film',publishYear:2024}], isLoading:false,error:null });
   try {
     const view = renderWithRouter();
     await waitFor(() => expect(screen.getByAltText('Poster for Synthetic film')).toHaveAttribute('src', 'blob:synthetic-poster'));

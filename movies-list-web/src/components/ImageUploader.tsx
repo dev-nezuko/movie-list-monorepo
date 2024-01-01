@@ -1,5 +1,5 @@
 import Dropzone from "react-dropzone";
-import { ReactComponent as DropIcon } from "assets/drop-icon.svg";
+import { UploadIcon } from "components/icons";
 import { useCallback, useState } from "react";
 import { Image } from "types/Image";
 import { ImageDisplay } from "./ImageDisplay";
@@ -39,7 +39,7 @@ export const ImageUploader = ({ image, onFileUpload, onImageRemove }: Props) => 
               className="flex flex-col items-center gap-2 cursor-pointer"
             >
               <input {...getInputProps()} />
-              <DropIcon />
+              <UploadIcon />
               <p>Drop a PNG or JPEG poster here</p><p className="text-sm opacity-75">One image, up to 5 MiB</p>
             </div>
           )}

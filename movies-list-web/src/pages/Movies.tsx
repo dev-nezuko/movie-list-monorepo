@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "components/Button";
-import { ReactComponent as PlusIcon } from "assets/plus-icon.svg";
-import { ReactComponent as LogoutIcon } from "assets/logout-icon.svg";
+import { LogoutIcon, PlusIcon } from "components/icons";
 import { MovieCard } from "components/MovieCard";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "constants/routes";
