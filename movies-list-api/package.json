@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0"
   },
-  "license": "ISC",
+  "license": "MIT",
   "keywords": [],
   "engines": {
     "node": ">=22.12 <23"
