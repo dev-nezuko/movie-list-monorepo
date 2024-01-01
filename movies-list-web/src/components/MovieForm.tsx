@@ -2,32 +2,23 @@ import { Input } from "components/Input";
 import { Form, Formik } from "formik";
 import { Button } from "components/Button";
 import { ImageUploader } from "components/ImageUploader";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Image } from "types/Image";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "constants/routes";
 import { movieSchema } from "schemas/movieSchema";
 import { createMovie, updateMovie } from "../services/api";
+import { Movie } from "../hooks/useMovies";
 
 interface Props {
   isEditState?: boolean;
-  initialData?: any;
+  initialData?: Movie;
 }
 
 export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [droppedImage, setDroppedImage] = useState<Image | undefined>();
-
-  useEffect(() => {
-    if (initialData) {
-      setDroppedImage({
-        name: initialData.title || "",
-        type: initialData.imageType || "",
-        file: null,
-      });
-    }
-  }, [initialData]);
 
   const onDrop = (image: Image) => setDroppedImage(image);
   const onImageRemove = () => setDroppedImage(undefined);
@@ -52,9 +43,8 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
 
       let response;
 
-      if (isEditState) {
-        const movieId = initialData._id;
-        response = await updateMovie(movieId, formData, userToken);
+      if (isEditState && initialData) {
+        response = await updateMovie(initialData._id, formData, userToken);
       } else {
         response = await createMovie(formData, userToken);
       }
@@ -64,14 +54,14 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
       }
 
       navigate(ROUTES.movies);
-    } catch (error) {
+    } catch {
       setError("The movie could not be saved. Check the API connection and try again.");
     }
   };
 
   return (
     <Formik
-      initialValues={{ title: initialData?.title || "", year: initialData?.publishYear || "" }}
+      initialValues={{ title: initialData?.title || "", year: initialData ? String(initialData.publishYear) : "" }}
       onSubmit={submitForm}
       validationSchema={movieSchema}
     >

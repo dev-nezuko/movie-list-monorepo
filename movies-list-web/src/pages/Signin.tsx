@@ -6,13 +6,13 @@ import { ROUTES } from "constants/routes";
 import { Form, Formik } from "formik";
 import { signinSchema } from "schemas/signinSchema";
 import { useNavigate } from "react-router-dom";
-import { login } from "../services/api";
+import { Credentials, login } from "../services/api";
 
 export const Signin = (): JSX.Element => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (values: any) => {
+  const handleLogin = async (values: Credentials & { remember?: boolean }) => {
     try {
       const userToken = await login(values);
 
@@ -21,8 +21,8 @@ export const Signin = (): JSX.Element => {
       else localStorage.removeItem('rememberedEmail');
 
       navigate(ROUTES.movies);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Sign-in failed");
     }
   };
 

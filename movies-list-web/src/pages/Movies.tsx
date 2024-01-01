@@ -11,7 +11,7 @@ export const Movies = (): JSX.Element => {
   const navigate = useNavigate();
   const { movies, isLoading, error } = useMovies();
 
-  const handleEditClick = (movie: any) => {
+  const handleEditClick = (movie: Movie) => {
     navigate(`${ROUTES.editMovie}/${movie._id}/edit`, { state: { movie } });
   };
 
