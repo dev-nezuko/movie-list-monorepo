@@ -1,4 +1,4 @@
-const BASE_URL = process.env.REACT_APP_SERVER_URL;
+const BASE_URL = process.env.REACT_APP_SERVER_URL || "http://127.0.0.1:3001";
 
 /**
  * Attempts to log in the user with the provided credentials.
@@ -52,7 +52,6 @@ export const login = async (values: any): Promise<string> => {
   
       return true;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   };
@@ -81,7 +80,6 @@ export const login = async (values: any): Promise<string> => {
       const data = await response.json();
       return data.movies;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   };
@@ -109,26 +107,26 @@ export const login = async (values: any): Promise<string> => {
     }
   };
   
-  /**
-   * Updates an existing movie.
-   * @param formData - The form data representing the updated movie.
-   * @param userToken - The user token for authentication.
-   * @returns The response from the server.
-   * @throws Error if updating the movie fails.
-   */
-  export const updateMovie = async (formData: FormData, userToken: string | null): Promise<Response> => {
-    try {
-      const response = await fetch(`${BASE_URL}/movies`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${userToken}`,
-        },
-        body: formData,
-      });
-  
-      return response;
-    } catch (error) {
-      throw new Error('Failed to update the movie');
-    }
-  };
-  
+ /**
+ * Updates an existing movie.
+ * @param movieId - The ID of the movie to update.
+ * @param formData - The form data representing the updated movie.
+ * @param userToken - The user token for authentication.
+ * @returns The response from the server.
+ * @throws Error if updating the movie fails.
+ */
+export const updateMovie = async (movieId: string, formData: FormData, userToken: string | null): Promise<Response> => {
+  try {
+    const response = await fetch(`${BASE_URL}/movies/${movieId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+      },
+      body: formData,
+    });
+
+    return response;
+  } catch (error) {
+    throw new Error('Failed to update the movie');
+  }
+};

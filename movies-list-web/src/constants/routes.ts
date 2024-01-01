@@ -2,5 +2,5 @@ export const ROUTES = {
   signin: '/signin',
   movies: '/movies',
   newMovie: '/movies/new',
-  editMovie: '/movies/:id/edit',
+  editMovie: '/movies',
 }

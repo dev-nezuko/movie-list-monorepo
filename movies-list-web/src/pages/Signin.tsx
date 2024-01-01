@@ -17,6 +17,8 @@ export const Signin = (): JSX.Element => {
       const userToken = await login(values);
 
       localStorage.setItem('userToken', userToken);
+      if (values.remember) localStorage.setItem('rememberedEmail', values.email);
+      else localStorage.removeItem('rememberedEmail');
 
       navigate(ROUTES.movies);
     } catch (error: any) {
@@ -27,18 +29,18 @@ export const Signin = (): JSX.Element => {
   return (
     <div className="flex flex-col items-center justify-center w-full">
       <Formik
-        initialValues={{ email: "", password: "" }}
+        initialValues={{ email: localStorage.getItem("rememberedEmail") || "", password: "" }}
         onSubmit={handleLogin}
         validationSchema={signinSchema}
       >
-        {() => (
-          <Form className="flex flex-col gap-4 items-center justify-center h-[100vh] md:w-1/5">
+        {({ isSubmitting }) => (
+          <Form className="flex flex-col gap-4 items-center justify-center min-h-[100dvh] w-full max-w-sm px-6">
             <h1 className="mb-6 text-6xl text-white">Sign in</h1>
             <Input name="email" type="email" placeholder="Email" />
             <Input name="password" type="password" placeholder="Password" />
-            <Checkbox name="remember" label="Remember me" />
+            <Checkbox name="remember" label="Remember email" />
             {error && <div className="text-red-500">{error}</div>}
-            <Button className="w-full" type="submit">
+            <Button disabled={isSubmitting} className="w-full" type="submit">
               Login
             </Button>
           </Form>

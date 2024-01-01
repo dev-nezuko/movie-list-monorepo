@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ReactComponent as DeleteIcon } from 'assets/delete-icon.svg';
 import { Image } from 'types/Image';
 
@@ -7,11 +8,17 @@ interface ImageProps {
 }
 
 export const ImageDisplay = ({ removeFile, image }: ImageProps): JSX.Element | null => {
+  const [imageUrl, setImageUrl] = useState('');
+  useEffect(() => {
+    if (!image?.file) return;
+    const url = URL.createObjectURL(image.file);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image?.file]);
   if (!image || !image.file) {
     return null;
   }
 
-  const imageUrl = URL.createObjectURL(image.file);
 
   return (
     <div className="relative mt-6">
@@ -24,6 +31,7 @@ export const ImageDisplay = ({ removeFile, image }: ImageProps): JSX.Element | n
       />
       <button
         type="button"
+        aria-label="Remove poster"
         onClick={(e) => {
           e.stopPropagation();
           removeFile();

@@ -1,76 +1,31 @@
-# Movie Management System
+# A personal movie collection, client and API
 
-## Welcome to the Movie Management System, a Revolutionary Project!
+Add a title, year and poster to your own collection, browse saved entries, and edit them. This monorepo pairs a React/Tailwind browser client with an Express/Mongoose API. It does not stream films or fetch commercial movie metadata.
 
-Welcome to the *Movie Management System*, a revolutionary project designed to elevate your movie organization experience. This cutting-edge system empowers users to effortlessly manage their movie collections with a seamlessly integrated backend and frontend. Dive into a world where **Node.js, TypeScript, MongoDB, React, and Tailwind CSS** converge to create a mind-blowing movie management experience.
+![Responsive catalog using synthetic titles and placeholder posters](movies-list-web/docs/screenshots/desktop.png)
 
-## Features
+## Start with the two boundaries
 
-### Sign-in
-- Effortlessly sign in to access and manage your personalized movie data securely.
+| Component | Read first | Owns |
+| --- | --- | --- |
+| `movies-list-api` | [API setup and contract](movies-list-api/README.md) | Login, stored token verification, owner-scoped movies, bounded uploads |
+| `movies-list-web` | [Browser setup and limits](movies-list-web/README.md) | Sign-in, catalog states, poster form, edits, local logout |
 
-### List Movies
-- Authenticated users are greeted with an instant display of their curated movie list.
-- Easily add new movies for a comprehensive and up-to-date collection.
+Configure each component's environment file, install its own locked dependencies, and run each in a separate terminal. The API uses an explicit full `MONGODB_URI`; the old implicit `DB_URL` database suffix is no longer used. Set a private `JWT_SECRET` of at least 32 characters and supply your own disposable seed email/password. No database or account is created automatically by the browser.
 
-### Add Movie
-- Seamlessly contribute to your database by adding new movies with essential details.
+The root `npm start` remains a convenience launcher after both components are configured and their dependencies installed. Default ports are 3001 for the API and 3000 for React.
 
-### Edit Movie
-- Keep your movie information current by editing existing entries with a user-friendly interface.
+## One edit request, all the way through
 
-### Log Out
-- Exit the system securely when your movie management session is complete.
+The edit link is `/movies/:id/edit`; the form sends `PUT /movies/:id` with multipart `title`, `publicationYear`, and an optional replacement image. The API scopes the update to the authenticated owner and keeps the existing poster when no replacement is uploaded. Returned records call the year `publishYear`.
 
-## Getting Started
+List requests return `{"movies":[...]}`. Images remain binary buffers inside JSON, so this design is suitable for a small exercise rather than a large media catalog. New uploads are capped at 5 MiB; that size limit does not decode or sanitize image contents.
 
-### Backend Setup (*Movie-list-api*)
+## Checks and honest limits
 
-1. **Clone the Project**
-   - Clone the project and navigate to the `movies-list` directory.
+The API's 11 Jest tests cover owner scoping, IDs/pagination, JWT configuration and stored-token enforcement, plus multipart limits. The browser's six Jest tests cover list states, offline logout and poster URL cleanup. TypeScript checks and the CRA production build were run for this monorepo after porting the reviewed sibling fixes.
 
-2. **Environment Variables**
-   - Add your environment variables data to the `.env` file.
+The screenshots were reused from the same reviewed client (with whitespace-only normalization): invented titles, local SVG placeholders, and an intercepted API. There was no reason to recreate them. No live MongoDB, native bcrypt login/seed, CORS round trip or image persistence was exercised.
 
-3. **Install Dependencies**
-   - Run `npm install` in the terminal to install the necessary backend dependencies.
+The client still lists only the first ten movies, has no delete or registration screen, and depends on navigation state for direct edit recovery. The API still needs login rate limits, restricted CORS, full image validation and storage/delivery improvements before public hosting. LocalStorage tokens remain readable to JavaScript. See the component READMEs for commands and the specific verification boundaries.
 
-4. **Seed the Database**
-   - Utilize the provided seeder by running `npm run db:seed` in the `movies-list-api` directory.
-
-### Frontend Setup (*movies-list-web*)
-
-1. **Navigate to Frontend Directory**
-   - Move to the `movies-list-web` directory for frontend setup.
-
-2. **Install Dependencies**
-   - Run `pnpm install` to install the frontend dependencies.
-
-3. **Start the Application**
-   - In the root directory (`movies-list`), run `npm start` to launch the application.
-
-### Login and Enjoy
-Access the system, sign in, and immerse yourself in the world of seamless movie collection management.
-
-## Images
-<img width="524" alt="Screenshot 2023-12-29 at 7 38 51 PM" src="https://github.com/dev-nezuko/movie-list-monorepo/assets/92055912/d3948206-cd5a-4132-a11a-2bb6f818b72e">
-<img width="1591" alt="Screenshot 2023-12-29 at 7 39 09 PM" src="https://github.com/dev-nezuko/movie-list-monorepo/assets/92055912/758d5e46-1b56-43b7-9754-865b68bfd5ec">
-
-<img width="1591" alt="Screenshot 2023-12-29 at 7 39 56 PM" src="https://github.com/dev-nezuko/movie-list-monorepo/assets/92055912/354c6efa-a01e-400a-86ba-8138ef8c1060">
-
-## Technologies Used
-
-### Backend
-
-- **Node.js**
-- **TypeScript**
-- **MongoDB**
-- **Mongoose ODM**
-
-### Frontend
-
-- **React**
-- **TypeScript**
-- **Tailwind CSS**
-
-Embrace the future of movie management – where technology meets entertainment, and organization meets innovation. Unleash the full potential of your movie collection with the *Movie Management System*. Happy movie managing! 🎬🚀

@@ -16,6 +16,7 @@ interface Props {
 
 export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
   const navigate = useNavigate();
+  const [error, setError] = useState("");
   const [droppedImage, setDroppedImage] = useState<Image | undefined>();
 
   useEffect(() => {
@@ -32,6 +33,8 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
   const onImageRemove = () => setDroppedImage(undefined);
 
   const submitForm = async (values: { title: string; year: string }) => {
+    setError("");
+    if (!isEditState && !droppedImage?.file) { setError("Choose a poster before creating a movie."); return; }
     try {
       const userToken = localStorage.getItem('userToken');
       if (!userToken) {
@@ -47,8 +50,14 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
         formData.append('image', droppedImage.file);
       }
 
-      const apiFunction = isEditState ? updateMovie : createMovie;
-      const response = await apiFunction(formData, userToken);
+      let response;
+
+      if (isEditState) {
+        const movieId = initialData._id;
+        response = await updateMovie(movieId, formData, userToken);
+      } else {
+        response = await createMovie(formData, userToken);
+      }
 
       if (!response.ok) {
         throw new Error(isEditState ? 'Failed to update the movie' : 'Failed to create a new movie');
@@ -56,7 +65,7 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
 
       navigate(ROUTES.movies);
     } catch (error) {
-      console.error(error);
+      setError("The movie could not be saved. Check the API connection and try again.");
     }
   };
 
@@ -66,15 +75,16 @@ export const MovieForm = ({ isEditState, initialData }: Props): JSX.Element => {
       onSubmit={submitForm}
       validationSchema={movieSchema}
     >
-      {() => (
-        <Form className="grid grid-cols-2">
+      {({ isSubmitting }) => (
+        <Form className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <ImageUploader image={droppedImage} onFileUpload={onDrop} onImageRemove={onImageRemove} />
-          <div className="flex flex-col w-1/2 gap-3">
+          <div className="flex flex-col w-full max-w-sm gap-3">
+            {error && <p role="alert" className="text-red-300">{error}</p>}
             <Input name="title" placeholder="Title" />
             <Input name="year" placeholder="Publishing year" />
             <div className="flex gap-3 mt-6">
               <Button variant="secondary" onClick={() => navigate(ROUTES.movies)}>Cancel</Button>
-              <Button type="submit">{isEditState ? "Update" : "Submit"}</Button>
+              <Button disabled={isSubmitting} type="submit">{isEditState ? "Update" : "Submit"}</Button>
             </div>
           </div>
         </Form>

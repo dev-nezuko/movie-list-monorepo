@@ -11,7 +11,7 @@ export const Router = () => {
       <Route path={ROUTES.signin} Component={Signin} />
       <Route path={ROUTES.movies} Component={Movies} />
       <Route path={ROUTES.newMovie} Component={NewMovie} />
-      <Route path={ROUTES.editMovie} Component={EditMovie} />
+      <Route path={`${ROUTES.editMovie}/:id/edit`} element={<EditMovie />} />
       <Route path="*" element={<Navigate to={ROUTES.signin} replace />} />
     </Routes>
   );

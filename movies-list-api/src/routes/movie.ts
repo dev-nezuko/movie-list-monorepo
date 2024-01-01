@@ -1,7 +1,8 @@
-import express, { Request as ExpressRequest, Response } from 'express';
+import express, { Request as ExpressRequest, Response, NextFunction } from 'express';
 const multer = require('multer');
 import authMiddleware from '../middlewares/auth';
 import Movie from '../models/movie';
+import { mongoose } from '../db/mongoose';
 
 interface MulterRequest extends ExpressRequest {
   file?: {
@@ -11,24 +12,22 @@ interface MulterRequest extends ExpressRequest {
 
 const movieRouter = express.Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ storage, limits: {fileSize: 5 * 1024 * 1024, files: 1, fields: 2} });
 
-/**
- * Endpoint for creating a new movie.
- */
 movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
     const { title, publicationYear } = req.body;
     const imageBuffer = req.file ? req.file.buffer : null;
 
-    if (!title || !publicationYear || !imageBuffer) {
+    const parsedYear = Number(publicationYear);
+    if (!title || !publicationYear || Number.isNaN(parsedYear) || !imageBuffer) {
       return res.status(400).json({ message: 'Incomplete data' });
     }
 
     const movie = new Movie({
       title,
       image: imageBuffer,
-      publishYear: publicationYear,
+      publishYear: parsedYear,
       userId: req.user?._id,
     });
 
@@ -41,13 +40,17 @@ movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: 
   }
 });
 
-/**
- * Endpoint for fetching a paginated list of movies.
- */
 movieRouter.get('/movies', authMiddleware, async (req: MulterRequest, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const rawPage = req.query.page as string | undefined;
+    const rawPageSize = req.query.pageSize as string | undefined;
+
+    const page = rawPage !== undefined ? Number(rawPage) : 1;
+    const pageSize = rawPageSize !== undefined ? Number(rawPageSize) : 10;
+
+    if (!Number.isInteger(page) || !Number.isInteger(pageSize) || page < 1 || pageSize < 1 || pageSize > 100) {
+      return res.status(400).json({ message: 'Invalid pagination parameters' });
+    }
 
     const skip = (page - 1) * pageSize;
 
@@ -63,12 +66,13 @@ movieRouter.get('/movies', authMiddleware, async (req: MulterRequest, res: Respo
   }
 });
 
-/**
- * Endpoint for fetching details of a specific movie by ID.
- */
 movieRouter.get('/movies/:id', authMiddleware, async (req: MulterRequest, res: Response) => {
   try {
     const movieId = req.params.id;
+
+    if (!mongoose.isValidObjectId(movieId)) {
+      return res.status(400).json({ message: 'Invalid movie ID format' });
+    }
 
     const movie = await Movie.findOne({ _id: movieId, userId: req.user?._id }).exec();
 
@@ -83,29 +87,34 @@ movieRouter.get('/movies/:id', authMiddleware, async (req: MulterRequest, res: R
   }
 });
 
-/**
- * Endpoint for updating details of a specific movie by ID.
- */
 movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
     const { title, publicationYear } = req.body;
     const imageBuffer = req.file ? req.file.buffer : null;
 
-    if (!title || !publicationYear) {
+    const parsedYear = Number(publicationYear);
+    if (!title || !publicationYear || Number.isNaN(parsedYear)) {
       return res.status(400).json({ message: 'Incomplete data' });
     }
 
     const movieId = req.params.id;
 
+    if (!mongoose.isValidObjectId(movieId)) {
+      return res.status(400).json({ message: 'Invalid movie ID format' });
+    }
+
+    const updatePayload: Partial<{ title: string; image: Buffer | null; publishYear: number }> = {
+      title,
+      publishYear: parsedYear,
+    };
+
+    if (imageBuffer) {
+      updatePayload.image = imageBuffer;
+    }
+
     const updatedMovie = await Movie.findOneAndUpdate(
       { _id: movieId, userId: req.user?._id },
-      {
-        $set: {
-          title,
-          image: imageBuffer,
-          publishYear: publicationYear,
-        },
-      },
+      { $set: updatePayload },
       { new: true }
     );
 
@@ -120,4 +129,9 @@ movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (re
   }
 });
 
+movieRouter.use((error: {code?: string}, _req: ExpressRequest, res: Response, next: NextFunction) => {
+  if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({message: 'Image must be no larger than 5 MiB'});
+  if (error.code?.startsWith('LIMIT_')) return res.status(400).json({message: 'Invalid multipart upload'});
+  next(error);
+});
 export default movieRouter;

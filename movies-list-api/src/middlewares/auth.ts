@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/user';
+import { jwtSecret } from '../config/auth';
 
 declare global {
   namespace Express {
@@ -26,12 +27,12 @@ declare global {
 
 const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.header('Authorization')?.match(/^Bearer (\S+)$/)?.[1];
     if (!token) {
       return res.status(401).json({ message: 'Unauthorized - Missing token' });
     }
 
-    const decoded = jwt.verify(token, 'your-secret-key') as { userId: string };
+    const decoded = jwt.verify(token, jwtSecret(), {algorithms: ['HS256']}) as { userId: string };
     const user = await User.findOne({ _id: decoded.userId, authToken: token });
 
     if (!user) {
@@ -42,7 +43,6 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
     req.token = token;
     next();
   } catch (error) {
-    console.error(error);
     res.status(401).json({ message: 'Unauthorized - Invalid token' });
   }
 };

@@ -18,6 +18,7 @@ export const Input = ({
     <div className="w-full">
       <input
         type={type}
+        aria-label={String(props.placeholder || name)}
         className={classnames(
           "text-white text-sm rounded-lg block w-full p-2.5 bg-inputColor placeholder:text-white",
           className,

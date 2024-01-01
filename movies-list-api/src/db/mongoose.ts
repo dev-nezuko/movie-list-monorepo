@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-const DB_URL=process.env.MONGODB_URI;
 /**
  * Connects to the MongoDB database using Mongoose.
  * @returns {Promise<void>} A promise that resolves once the connection is established.
@@ -8,10 +7,12 @@ const DB_URL=process.env.MONGODB_URI;
  */
 const connectDB = async () => {
   try {
-    await mongoose.connect(`${DB_URL}/movie-list`);
+    const url=process.env.MONGODB_URI;
+    if (!url) throw new Error("MONGODB_URI is required");
+    await mongoose.connect(url);
     console.log('MongoDB connected successfully');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('MongoDB connection failed');
     throw error;
   }
 };
