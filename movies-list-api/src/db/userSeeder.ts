@@ -4,43 +4,27 @@ import bcrypt from 'bcrypt';
 import User from '../models/user';
 import { connectDB, mongoose } from './mongoose';
 
-/**
- * Seeds a user in the MongoDB database.
- *
- * If the configured seed email already exists, it is left unchanged.
- *
- * @throws {Error} If there is an error during the seeding process.
- */
+// Creates the one demo account from SEED_USER_EMAIL / SEED_USER_PASSWORD; an existing email is left untouched.
 async function seedUser() {
+  const email = process.env.SEED_USER_EMAIL?.trim().toLowerCase();
+  const password = process.env.SEED_USER_PASSWORD;
+  if (!email || !password || password.length < 12) {
+    throw new Error('Configure SEED_USER_EMAIL and a SEED_USER_PASSWORD of at least 12 characters');
+  }
+  await connectDB();
   try {
-    const email = process.env.SEED_USER_EMAIL;
-    const password = process.env.SEED_USER_PASSWORD;
-    if (!email || !password || password.length < 12) throw new Error('Configure SEED_USER_EMAIL and a SEED_USER_PASSWORD of at least 12 characters');
-    await connectDB();
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (await User.exists({ email })) {
       console.log('User already exists. Seeder skipped.');
       return;
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = new User({
-      email,
-      password: hashedPassword,
-    });
-
-    await newUser.save();
-
+    await User.create({ email, password: await bcrypt.hash(password, 10) });
     console.log('User seeded successfully.');
-  } catch (error) {
-    console.error("Local user seeding failed");
-    throw error;
   } finally {
     await mongoose.disconnect();
   }
 }
 
-// Execute the user seeding script
-seedUser();
+seedUser().catch((error: Error) => {
+  console.error(`Seeding failed: ${error.message}`);
+  process.exitCode = 1;
+});

@@ -7,9 +7,6 @@ import { jwtSecret } from '../config/auth';
 
 const userRouter = express.Router();
 
-/**
- * Endpoint for user login.
- */
 userRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -17,7 +14,7 @@ userRouter.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({message: "Email and password strings are required"});
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -42,9 +39,6 @@ userRouter.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Endpoint for user logout.
- */
 userRouter.post('/logout', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = req.user!;

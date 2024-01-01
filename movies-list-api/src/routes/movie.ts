@@ -1,8 +1,9 @@
 import express, { Request as ExpressRequest, Response, NextFunction } from 'express';
 const multer = require('multer');
 import authMiddleware from '../middlewares/auth';
-import Movie from '../models/movie';
+import Movie, { IMovie } from '../models/movie';
 import { mongoose } from '../db/mongoose';
+import { detectPosterType, parseTitle, parseYear, TITLE_MAX_LENGTH } from '../validation/movie';
 
 interface MulterRequest extends ExpressRequest {
   file?: {
@@ -10,24 +11,29 @@ interface MulterRequest extends ExpressRequest {
   };
 }
 
+const INVALID_FIELDS = `Give a title of 1-${TITLE_MAX_LENGTH} characters and a four-digit publication year`;
+const UNSUPPORTED_IMAGE = 'Posters must be PNG or JPEG images';
+
 const movieRouter = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: {fileSize: 5 * 1024 * 1024, files: 1, fields: 2} });
 
 movieRouter.post('/movies', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
-    const { title, publicationYear } = req.body;
-    const imageBuffer = req.file ? req.file.buffer : null;
+    const title = parseTitle(req.body.title);
+    const year = parseYear(req.body.publicationYear);
+    if (!title || !year) return res.status(400).json({ message: INVALID_FIELDS });
 
-    const parsedYear = Number(publicationYear);
-    if (!title || !publicationYear || Number.isNaN(parsedYear) || !imageBuffer) {
-      return res.status(400).json({ message: 'Incomplete data' });
-    }
+    const imageBuffer = req.file?.buffer;
+    if (!imageBuffer) return res.status(400).json({ message: 'A poster image is required' });
+    const imageType = detectPosterType(imageBuffer);
+    if (!imageType) return res.status(415).json({ message: UNSUPPORTED_IMAGE });
 
     const movie = new Movie({
       title,
       image: imageBuffer,
-      publishYear: parsedYear,
+      imageType,
+      publishYear: year,
       userId: req.user?._id,
     });
 
@@ -89,27 +95,23 @@ movieRouter.get('/movies/:id', authMiddleware, async (req: MulterRequest, res: R
 
 movieRouter.put('/movies/:id', authMiddleware, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
-    const { title, publicationYear } = req.body;
-    const imageBuffer = req.file ? req.file.buffer : null;
-
-    const parsedYear = Number(publicationYear);
-    if (!title || !publicationYear || Number.isNaN(parsedYear)) {
-      return res.status(400).json({ message: 'Incomplete data' });
-    }
-
     const movieId = req.params.id;
-
     if (!mongoose.isValidObjectId(movieId)) {
       return res.status(400).json({ message: 'Invalid movie ID format' });
     }
 
-    const updatePayload: Partial<{ title: string; image: Buffer | null; publishYear: number }> = {
-      title,
-      publishYear: parsedYear,
-    };
+    const title = parseTitle(req.body.title);
+    const year = parseYear(req.body.publicationYear);
+    if (!title || !year) return res.status(400).json({ message: INVALID_FIELDS });
 
+    const updatePayload: Partial<Pick<IMovie, 'title' | 'image' | 'imageType' | 'publishYear'>> = { title, publishYear: year };
+
+    const imageBuffer = req.file?.buffer;
     if (imageBuffer) {
+      const imageType = detectPosterType(imageBuffer);
+      if (!imageType) return res.status(415).json({ message: UNSUPPORTED_IMAGE });
       updatePayload.image = imageBuffer;
+      updatePayload.imageType = imageType;
     }
 
     const updatedMovie = await Movie.findOneAndUpdate(
