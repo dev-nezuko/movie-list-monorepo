@@ -1,46 +1,75 @@
-import { Movie } from "../hooks/useMovies";
+import { Movie, MoviePage } from "types/Movie";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3001";
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 export interface Credentials {
   email: string;
   password: string;
 }
 
+const UNREACHABLE = "Can't reach the movie server. Check that the API is running and try again.";
+
 const authHeader = (userToken: string | null) => ({ Authorization: `Bearer ${userToken}` });
 
-export const login = async (values: Credentials): Promise<string> => {
-  const response = await fetch(`${BASE_URL}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: values.email, password: values.password }),
-  }).catch(() => null);
+async function request(path: string, init: RequestInit = {}): Promise<Response> {
+  const response = await fetch(`${BASE_URL}${path}`, init).catch(() => {
+    throw new ApiError(UNREACHABLE, 0);
+  });
+  if (response.ok) return response;
+  const body = await response.json().catch(() => ({}));
+  throw new ApiError(typeof body.message === "string" ? body.message : `Request failed (${response.status})`, response.status);
+}
 
-  if (!response?.ok) throw new Error("Invalid email or password");
-  const data: { token: string } = await response.json();
-  return data.token;
+export const login = async (values: Credentials): Promise<string> => {
+  try {
+    const response = await request("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: values.email, password: values.password }),
+    });
+    const data: { token: string } = await response.json();
+    return data.token;
+  } catch (error) {
+    // The API's 401 text is deliberately vague; keep it, but say so plainly for any other 4xx.
+    if (error instanceof ApiError && error.status === 401) throw new ApiError("Invalid email or password", 401);
+    throw error;
+  }
 };
 
 export const logout = async (userToken: string | null): Promise<void> => {
-  const response = await fetch(`${BASE_URL}/logout`, { method: "POST", headers: authHeader(userToken) });
-  if (!response.ok) throw new Error("Failed to logout");
+  await request("/logout", { method: "POST", headers: authHeader(userToken) });
 };
 
-export const getMovies = async (page: number, pageSize: number, userToken: string | null): Promise<Movie[]> => {
-  const response = await fetch(`${BASE_URL}/movies?page=${page}&pageSize=${pageSize}`, { headers: authHeader(userToken) });
-  if (!response.ok) throw new Error("Failed to fetch movies");
-  const data: { movies: Movie[] } = await response.json();
-  return data.movies;
+export const getMovies = async (page: number, pageSize: number, userToken: string | null): Promise<MoviePage> => {
+  const response = await request(`/movies?page=${page}&pageSize=${pageSize}`, { headers: authHeader(userToken) });
+  return response.json();
 };
 
-export const createMovie = (formData: FormData, userToken: string | null): Promise<Response> =>
-  fetch(`${BASE_URL}/movies`, { method: "POST", headers: authHeader(userToken), body: formData });
+export const getMovie = async (movieId: string, userToken: string | null): Promise<Movie> => {
+  const response = await request(`/movies/${encodeURIComponent(movieId)}`, { headers: authHeader(userToken) });
+  const data: { movie: Movie } = await response.json();
+  return data.movie;
+};
 
-export const updateMovie = (movieId: string, formData: FormData, userToken: string | null): Promise<Response> =>
-  fetch(`${BASE_URL}/movies/${movieId}`, { method: "PUT", headers: authHeader(userToken), body: formData });
+export const saveMovie = async (formData: FormData, userToken: string | null, movieId?: string): Promise<void> => {
+  await request(movieId ? `/movies/${encodeURIComponent(movieId)}` : "/movies", {
+    method: movieId ? "PUT" : "POST",
+    headers: authHeader(userToken),
+    body: formData,
+  });
+};
+
+export const deleteMovie = async (movieId: string, userToken: string | null): Promise<void> => {
+  await request(`/movies/${encodeURIComponent(movieId)}`, { method: "DELETE", headers: authHeader(userToken) });
+};
 
 export const getPoster = async (movieId: string, userToken: string | null): Promise<Blob> => {
-  const response = await fetch(`${BASE_URL}/movies/${movieId}/poster`, { headers: authHeader(userToken) });
-  if (!response.ok) throw new Error("Failed to load poster");
+  const response = await request(`/movies/${encodeURIComponent(movieId)}/poster`, { headers: authHeader(userToken) });
   return response.blob();
 };

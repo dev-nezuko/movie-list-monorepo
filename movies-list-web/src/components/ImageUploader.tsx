@@ -6,22 +6,19 @@ import { ImageDisplay } from "./ImageDisplay";
 
 interface Props {
   image?: Image;
+  currentPosterUrl?: string;
   onFileUpload: (image: Image) => void;
   onImageRemove: () => void;
 }
 
-export const ImageUploader = ({ image, onFileUpload, onImageRemove }: Props) => {
+export const ImageUploader = ({ image, currentPosterUrl, onFileUpload, onImageRemove }: Props) => {
   const [uploadError, setUploadError] = useState("");
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length) {
         setUploadError("");
         const file = acceptedFiles[0];
-        onFileUpload({
-          name: file.name,
-          type: file.type,
-          file,
-        });
+        onFileUpload({ name: file.name, type: file.type, file });
       }
     },
     [onFileUpload]
@@ -36,11 +33,15 @@ export const ImageUploader = ({ image, onFileUpload, onImageRemove }: Props) => 
           ) : (
             <div
               {...getRootProps()}
-              className="flex flex-col items-center gap-2 cursor-pointer"
+              className="flex flex-col items-center gap-2 cursor-pointer text-center"
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} aria-label="Poster image" />
+              {currentPosterUrl && (
+                <img src={currentPosterUrl} alt="Current poster" className="object-cover mb-4 rounded-lg h-60 w-40" />
+              )}
               <UploadIcon />
-              <p>Drop a PNG or JPEG poster here</p><p className="text-sm opacity-75">One image, up to 5 MiB</p>
+              <p>{currentPosterUrl ? "Drop a PNG or JPEG to replace the poster" : "Drop a PNG or JPEG poster here"}</p>
+              <p className="text-sm opacity-75">One image, up to 5 MiB</p>
             </div>
           )}
           {uploadError && <p role="alert" className="px-4 text-center text-red-300">{uploadError}</p>}
