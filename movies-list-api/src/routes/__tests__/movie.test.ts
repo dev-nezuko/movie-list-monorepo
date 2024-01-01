@@ -7,7 +7,7 @@ jest.mock('../../models/movie');
 jest.mock('../../middlewares/auth', () => ({
   __esModule: true,
   default: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
-    (req as any).user = { _id: 'user-id' };
+    Object.assign(req, { user: { _id: 'user-id' } });
     next();
   },
 }));
